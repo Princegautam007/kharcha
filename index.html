@@ -377,9 +377,10 @@ function escapeHtml(value) {
 }
 
 // ---- SMS PARSING (called by Android bridge too) ----
-function parseSms(text) {
+function parseSms(text, senderId) {
   if (!text) return null;
   const t = text.toLowerCase();
+  const sender = String(senderId || '').toLowerCase();
 
   // Skip OTP / promotional SMS
   if (/\botp\b|\bpassword\b|\bverif/i.test(text)) return null;
@@ -393,7 +394,7 @@ function parseSms(text) {
   const amtPatterns = [
     /(?:rs\.?|inr|rupees?)\s*([\d,]+(?:\.\d{1,2})?)/i,
     /([\d,]+(?:\.\d{1,2})?)\s*(?:rs\.?|inr|rupees?)/i,
-    /(?:debited|credited|paid|spent|transferred)\D+([\d,]+(?:\.\d{1,2})?)/i,
+    /(?:debited|credited|paid|spent|transferred|withdrawn|withdrawal)\D+([\d,]+(?:\.\d{1,2})?)/i,
   ];
   for (const p of amtPatterns) {
     const m = text.match(p);
@@ -402,43 +403,68 @@ function parseSms(text) {
   if (!amount || amount <= 0) return null;
 
   // Transaction type
-  if (/debited|spent|paid|purchase|payment|debit|dr\b/i.test(text)) type = 'debit';
-  else if (/credited|received|credit|cr\b|cashback|refund/i.test(text)) type = 'credit';
+  if (/debited|spent|paid|purchase|payment|debit|dr\b|cash\s*withdrawal|withdrawn|withdrawal|atm/i.test(text)) type = 'debit';
+  else if (/credited|received|credit|cr\b|cashback|refund|refunded|reversal|reversed/i.test(text)) type = 'credit';
   else type = 'debit';
 
   // Merchant extraction
   const merchantPatterns = [
-    /(?:to|at|for|towards)\s+([A-Za-z0-9 &'.-]{2,30})(?:\s+(?:on|via|using|ref|upi|for)|\.|$)/i,
-    /(?:VPA|UPI ID)[:\s]+([A-Za-z0-9._@-]+)/i,
-    /(?:merchant|store)[:\s]+([A-Za-z0-9 &'.-]{2,30})/i,
+    /\b([A-Za-z0-9._-]{2,60}@[A-Za-z0-9._-]{2,30})\b/i,
+    /(?:VPA|UPI ID)[:\s]+([A-Za-z0-9._-]{2,60}@[A-Za-z0-9._-]{2,30})/i,
+    /(?:refund(?:ed)?|cashback|reversal).{0,50}?(?:from|by|at)\s+([A-Za-z][A-Za-z0-9 &'._-]{1,49}?)(?=\s+(?:on|via|using|ref|upi|utr|a\/c|acct|ending|and|to|from)\b|[.,;]|$)/i,
+    /(?:paid to|payment to|sent to|transferred to|to)\s+([A-Za-z][A-Za-z0-9 &'._@-]{1,49}?)(?=\s+(?:on|via|using|ref|upi|utr|a\/c|acct|account|from)\b|[.,;]|$)/i,
+    /(?:at|for|towards|merchant|store)\s*[:\s]+([A-Za-z][A-Za-z0-9 &'._@-]{1,49}?)(?=\s+(?:on|via|using|ref|upi|utr|a\/c|acct|account|from)\b|[.,;]|$)/i,
   ];
   for (const p of merchantPatterns) {
     const m = text.match(p);
-    if (m) { merchant = m[1].trim(); break; }
+    if (!m) continue;
+    const candidate = m[1].trim().replace(/[.,;]+$/, '');
+    if (/^(your\s+)?(?:account|a\/c|acct)$/i.test(candidate)) continue;
+    merchant = candidate;
+    break;
   }
 
-  // Bank detection
-  const bankMap = {
-    'hdfc': 'HDFC', 'sbi': 'SBI', 'icici': 'ICICI', 'axis': 'Axis',
-    'kotak': 'Kotak', 'pnb': 'PNB', 'bob': 'BOB', 'paytm': 'Paytm',
-    'phonepe': 'PhonePe', 'gpay': 'GPay', 'yes bank': 'Yes Bank',
-    'idfc': 'IDFC', 'federal': 'Federal', 'union': 'Union Bank',
-  };
-  for (const [key, val] of Object.entries(bankMap)) {
-    if (t.includes(key)) { bank = val; break; }
+  // Bank detection. senderId lets Android provide the real SMS sender when
+  // the bank or payment app name is not present in the message body.
+  const bankRules = [
+    { keys: ['canara bank', 'canbnk', 'canara', 'cnrb'], name: 'Canara Bank' },
+    { keys: ['indian overseas bank', 'iobank', 'iob'], name: 'Indian Overseas Bank' },
+    { keys: ['uco bank', 'ucobk', 'uco'], name: 'UCO Bank' },
+    { keys: ['idfc first bank', 'idfc first', 'idfcfb', 'idfc'], name: 'IDFC First Bank' },
+    { keys: ['bank of baroda', 'bob', 'baroda'], name: 'BOB' },
+    { keys: ['hdfc', 'hdfcbk'], name: 'HDFC' },
+    { keys: ['sbi', 'sbiinb'], name: 'SBI' },
+    { keys: ['icici', 'icicib'], name: 'ICICI' },
+    { keys: ['axis', 'axisbk'], name: 'Axis' },
+    { keys: ['kotak'], name: 'Kotak' },
+    { keys: ['pnb'], name: 'PNB' },
+    { keys: ['paytm', 'pytm'], name: 'Paytm' },
+    { keys: ['phonepe', 'phonpe'], name: 'PhonePe' },
+    { keys: ['gpay', 'google pay'], name: 'GPay' },
+    { keys: ['yes bank'], name: 'Yes Bank' },
+    { keys: ['federal'], name: 'Federal' },
+    { keys: ['union bank', 'union'], name: 'Union Bank' },
+  ];
+  for (const rule of bankRules) {
+    const found = rule.keys.some(key => {
+      if (sender.includes(key)) return true;
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp('(?:^|[^a-z0-9])' + escaped + '(?:[^a-z0-9]|$)', 'i').test(t);
+    });
+    if (found) { bank = rule.name; break; }
   }
 
   // Auto-category from merchant name
   let category = 'other';
   if (merchant) {
     const m = merchant.toLowerCase();
-    if (/swiggy|zomato|mcdonald|kfc|domino|pizza|cafe|restaurant|eat|biryani|dhaba|food|blinkit/.test(m)) category = 'food';
-    else if (/ola|uber|rapido|metro|irctc|makemytrip|redbus|train|flight|bus|cab|auto/.test(m)) category = 'transport';
-    else if (/amazon|flipkart|myntra|ajio|meesho|nykaa|shop|mall|store|fashion|clothes/.test(m)) category = 'shopping';
-    else if (/jio|airtel|bsnl|vi |vodafone|electricity|water|gas|bill|recharge|netflix|hotstar|prime/.test(m)) category = 'bills';
-    else if (/apollo|medplus|pharma|hospital|clinic|doctor|medicine|health|med/.test(m)) category = 'health';
-    else if (/petrol|diesel|fuel|hp |iocl|bharat petroleum|bp |shell/.test(m)) category = 'fuel';
-    else if (/bigbasket|grofer|dmart|reliance fresh|more |nature basket|grocery|kirana|supermart/.test(m)) category = 'groceries';
+    if (/swiggy|zomato|mcdonald|kfc|domino|pizza hut|pizza|cafe|restaurant|eat|biryani|dhaba|food|starbucks|subway|burger king|chaayos|haldiram/.test(m)) category = 'food';
+    else if (/blinkit|zepto|bigbasket|grofers|dmart|jiomart|instamart|reliance fresh|more supermarket|nature'?s basket|grocery|kirana|supermart/.test(m)) category = 'groceries';
+    else if (/ola|uber|rapido|indrive|blu smart|metro|irctc|makemytrip|cleartrip|easemytrip|redbus|train|flight|bus|cab|auto|parking|fastag|toll/.test(m)) category = 'transport';
+    else if (/amazon|flipkart|myntra|ajio|meesho|nykaa|croma|reliance digital|decathlon|ikea|tata cliq|shop|mall|store|fashion|clothes/.test(m)) category = 'shopping';
+    else if (/jio|airtel|bsnl|vi |vodafone|electricity|water|gas|bill|recharge|netflix|hotstar|prime video|spotify|youtube premium|broadband|d2h|insurance/.test(m)) category = 'bills';
+    else if (/apollo|medplus|pharmeasy|tata 1mg|1mg|netmeds|pharma|hospital|clinic|practo|doctor|medicine|health|med/.test(m)) category = 'health';
+    else if (/petrol|diesel|fuel|hp |iocl|indian oil|hpcl|bpcl|bharat petroleum|nayara|reliance petroleum|shell/.test(m)) category = 'fuel';
   }
 
   return {
@@ -646,8 +672,8 @@ function repairMisfiledSms() {
 
 // ---- ANDROID BRIDGE ----
 // Android app calls this function when a new SMS arrives
-window.onSmsReceived = function(smsBody) {
-  const parsed = parseSms(smsBody);
+window.onSmsReceived = function(smsBody, senderId) {
+  const parsed = parseSms(smsBody, senderId);
   if (!parsed) return;
   parsed.smsKey = buildSmsKey(smsBody, parsed.date);
   if (addSmsExpenses([parsed]) === 0) return;
@@ -661,7 +687,8 @@ window.onSmsHistoryReceived = function(smsArray) {
   const items = [];
   smsArray.forEach(sms => {
     const body = typeof sms === 'string' ? sms : (sms && sms.body);
-    const parsed = parseSms(body);
+    const senderId = typeof sms === 'string' ? '' : (sms && sms.address);
+    const parsed = parseSms(body, senderId);
     if (!parsed) return;
     const when = sms && sms.date ? new Date(sms.date) : null;
     if (when && !isNaN(when.getTime())) parsed.date = when.toISOString();

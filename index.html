@@ -6,7 +6,9 @@
   <meta name="theme-color" content="#6C63FF" />
   <meta name="description" content="Kharcha - Smart expense tracker that reads your bank SMS automatically" />
   <title>Kharcha</title>
-  <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -823,6 +825,15 @@ function showToast(msg, type) {
   t.textContent = msg;
   t.className = 'toast show ' + (type || '');
   setTimeout(() => { t.className = 'toast'; }, 2800);
+}
+
+// ---- OFFLINE SUPPORT ----
+// Only works over http or https. Inside the Android app the files load from
+// the phone itself, so no service worker is needed there.
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* app still works without it */ });
+  });
 }
 
 // ---- INIT ----

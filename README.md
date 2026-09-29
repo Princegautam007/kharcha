@@ -43,6 +43,11 @@ The web app and Android app share one codebase. The SMS parsing logic lives in `
 ```
 kharcha/
   index.html              the full web app
+  manifest.json           app name, colours and icons for installing
+  sw.js                   saves the app files so it works offline
+  icons/                  app icons
+  LICENSE                 MIT license
+  .github/workflows/      publishes the site to GitHub Pages
   android/                Android wrapper app
     app/src/main/
       java/com/example/kharcha/
@@ -51,7 +56,6 @@ kharcha/
       AndroidManifest.xml permissions and receiver registration
       res/layout/         activity layout
   docs/                   documentation
-  memory/                 project logs and roadmap
 ```
 
 ---

@@ -137,6 +137,31 @@
     .data-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 4px; font-size: 13px; color: var(--text); cursor: pointer; }
     .data-btn:active { border-color: var(--primary); }
 
+    /* BUDGETS */
+    .budget-section { margin-bottom: 20px; }
+    .budget-set-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 5px 14px; font-size: 12px; color: var(--primary); cursor: pointer; }
+    .budget-set-btn:active { border-color: var(--primary); }
+    .budget-list { display: flex; flex-direction: column; gap: 8px; }
+    .budget-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    .budget-top { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 8px; }
+    .budget-name { font-weight: 600; }
+    .budget-amt { color: var(--text2); font-size: 12px; }
+    .budget-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+    .budget-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.3s; }
+    .budget-item.warn .budget-fill { background: var(--yellow); }
+    .budget-item.over .budget-fill { background: var(--red); }
+    .budget-note { font-size: 11px; color: var(--text2); margin-top: 6px; }
+    .budget-item.warn .budget-note { color: var(--yellow); }
+    .budget-item.over .budget-note { color: var(--red); }
+    .budget-empty { background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); padding: 14px; font-size: 12px; color: var(--text2); line-height: 1.5; }
+    .budget-modal { max-height: 90dvh; overflow-y: auto; }
+    .budget-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .budget-row-label { flex: 1; font-size: 14px; }
+    .budget-row input { width: 110px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 14px; outline: none; }
+    .budget-row input:focus { border-color: var(--primary); }
+    .budget-clear { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); border-radius: 8px; width: 34px; height: 34px; font-size: 16px; cursor: pointer; }
+    .budget-hint { font-size: 12px; color: var(--text2); margin-bottom: 14px; line-height: 1.5; }
+
     /* TOAST */
     .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; font-size: 14px; z-index: 999; transition: transform 0.3s; white-space: nowrap; }
     .toast.show { transform: translateX(-50%) translateY(0); }
@@ -184,6 +209,15 @@
   <div class="sms-banner" id="smsBanner" style="display:none">
     <div class="sms-banner-title">Auto SMS Reading</div>
     <div class="sms-banner-text">Open this app in the Kharcha Android app to enable automatic bank SMS reading. No manual input needed.</div>
+  </div>
+
+  <!-- Budgets -->
+  <div class="budget-section">
+    <div class="section-title">
+      <span>Budgets</span>
+      <button class="budget-set-btn" onclick="openBudgetModal()">Set</button>
+    </div>
+    <div class="budget-list" id="budgetList"></div>
   </div>
 
   <!-- Stats -->
@@ -275,6 +309,19 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-save" onclick="saveExpense()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Budget Modal -->
+<div class="modal-overlay" id="budgetModal" onclick="closeBudgetModalOnBg(event)">
+  <div class="modal budget-modal">
+    <div class="modal-title">Monthly Budgets</div>
+    <div class="budget-hint">Set a limit for each category. It applies to every month. Leave a box empty for no limit.</div>
+    <div id="budgetRows"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeBudgetModal()">Cancel</button>
+      <button class="btn-save" onclick="saveBudgetsFromModal()">Save</button>
     </div>
   </div>
 </div>
@@ -731,11 +778,71 @@ function render() {
   document.getElementById('txCount').textContent = expenses.length + ' transactions';
   document.getElementById('avgSpend').textContent = 'avg Rs.' + Math.round(totalSpent / Math.max(daysPassed, 1)).toLocaleString('en-IN') + '/day';
 
+  renderBudgets(debits);
   renderBarChart(debits, daysInMonth);
   renderDonut(debits);
   renderRecurring();
   renderFilters();
   renderTxList();
+}
+
+function formatRs(n) {
+  return 'Rs.' + Math.round(n).toLocaleString('en-IN');
+}
+
+// Shows one progress bar for each category that has a budget.
+function renderBudgets(debits) {
+  const budgets = loadBudgets();
+  const spent = spentByCategory(debits);
+  const rows = CATEGORIES.filter(c => budgets[c.id]).map(c => {
+    const limit = budgets[c.id];
+    const used = spent[c.id] || 0;
+    const s = budgetStatus(used, limit);
+    let note = formatRs(s.left) + ' left';
+    if (s.level === 'warn') note = 'Almost at the limit. ' + note;
+    if (s.level === 'over') note = 'Over the budget by ' + formatRs(-s.left);
+    return '<div class="budget-item ' + s.level + '">' +
+      '<div class="budget-top"><span class="budget-name">' + c.icon + ' ' + escapeHtml(c.label) + '</span>' +
+      '<span class="budget-amt">' + formatRs(used) + ' of ' + formatRs(limit) + '</span></div>' +
+      '<div class="budget-track"><div class="budget-fill" style="width:' + s.percent + '%"></div></div>' +
+      '<div class="budget-note">' + note + '</div></div>';
+  });
+  document.getElementById('budgetList').innerHTML = rows.length
+    ? rows.join('')
+    : '<div class="budget-empty">No budgets yet. Tap Set to add a monthly limit for a category.</div>';
+}
+
+function openBudgetModal() {
+  const budgets = loadBudgets();
+  document.getElementById('budgetRows').innerHTML = CATEGORIES.map(c =>
+    '<div class="budget-row"><span class="budget-row-label">' + c.icon + ' ' + escapeHtml(c.label) + '</span>' +
+    '<input type="number" id="bud-' + c.id + '" inputmode="decimal" min="0" placeholder="No limit" value="' + (budgets[c.id] || '') + '" />' +
+    '<button class="budget-clear" onclick="clearBudgetInput(\'' + c.id + '\')" aria-label="Clear ' + escapeHtml(c.label) + ' budget">&times;</button></div>'
+  ).join('');
+  document.getElementById('budgetModal').classList.add('open');
+}
+
+function closeBudgetModal() {
+  document.getElementById('budgetModal').classList.remove('open');
+}
+
+function closeBudgetModalOnBg(e) {
+  if (e.target === document.getElementById('budgetModal')) closeBudgetModal();
+}
+
+function clearBudgetInput(id) {
+  document.getElementById('bud-' + id).value = '';
+}
+
+function saveBudgetsFromModal() {
+  const values = {};
+  CATEGORIES.forEach(c => { values[c.id] = document.getElementById('bud-' + c.id).value; });
+  const result = readBudgetInputs(values);
+  if (result.error) { showToast(result.error, 'error'); return; }
+  saveBudgets(result.budgets);
+  closeBudgetModal();
+  render();
+  showToast('Budgets saved', 'success');
 }
 
 function renderBarChart(debits, daysInMonth) {

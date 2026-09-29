@@ -135,6 +135,44 @@
     .legend-label { color: var(--text2); flex: 1; }
     .legend-val { color: var(--text); font-weight: 600; }
 
+    /* BUDGET SETTINGS MODAL */
+    .budget-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; }
+    .budget-modal-overlay.open { display: flex; }
+    .budget-modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px 20px; width: 100%; max-width: 480px; margin: 0 auto; max-height: 85vh; overflow-y: auto; }
+    .budget-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .budget-modal-title { font-size: 17px; font-weight: 700; }
+    .budget-modal-close { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 4px; }
+    .budget-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .budget-row-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .budget-row-label { flex: 1; font-size: 14px; font-weight: 500; }
+    .budget-input { width: 110px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--text); font-size: 14px; outline: none; text-align: right; }
+    .budget-input:focus { border-color: var(--primary); }
+    .budget-input::placeholder { color: var(--text2); }
+    .budget-save-btn { width: 100%; background: var(--primary); color: #fff; border: none; border-radius: var(--radius); padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .budget-save-btn:active { background: var(--primary-dark); }
+
+    /* BUDGET PROGRESS IN STATS */
+    .budget-section { margin-bottom: 20px; }
+    .budget-section-header { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .budget-set-link { font-size: 12px; color: var(--primary); cursor: pointer; text-transform: none; letter-spacing: 0; }
+    .budget-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
+    .budget-card.warn { border-color: var(--yellow); }
+    .budget-card.over { border-color: var(--red); }
+    .budget-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .budget-card-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .budget-card-name { flex: 1; font-size: 14px; font-weight: 600; }
+    .budget-card-status { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+    .budget-card-status.ok { background: rgba(74,222,128,0.15); color: var(--green); }
+    .budget-card-status.warn { background: rgba(250,204,21,0.15); color: var(--yellow); }
+    .budget-card-status.over { background: rgba(255,92,92,0.15); color: var(--red); }
+    .budget-bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .budget-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+    .budget-bar-fill.ok { background: var(--green); }
+    .budget-bar-fill.warn { background: var(--yellow); }
+    .budget-bar-fill.over { background: var(--red); }
+    .budget-card-amounts { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--text2); }
+    .budget-card-amounts .spent { font-weight: 600; color: var(--text); }
+
     /* SMS BANNER */
     .sms-banner { background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(108,99,255,0.05)); border: 1px solid rgba(108,99,255,0.4); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
     .sms-banner-title { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
@@ -164,6 +202,15 @@
     <div class="sms-banner-text">Open this app in the Kharcha Android app to enable automatic bank SMS reading. No manual input needed.</div>
   </div>
 
+  <!-- Budget Overview Section (shown only when at least one budget is set) -->
+  <div class="budget-section" id="budgetSection" style="display:none">
+    <div class="budget-section-header">
+      <span>Budget</span>
+      <span class="budget-set-link" onclick="openBudgetModal()">Edit budgets</span>
+    </div>
+    <div id="budgetCards"></div>
+  </div>
+
   <!-- Stats -->
   <div class="stats">
     <div class="stat-card">
@@ -176,6 +223,11 @@
       <div class="stat-value green" id="totalCredit">0</div>
       <div class="stat-sub" id="avgSpend">avg 0/day</div>
     </div>
+  </div>
+
+  <!-- Budget button row -->
+  <div style="text-align:right; margin-bottom: 16px; margin-top: -8px;">
+    <span style="font-size:12px; color:var(--primary); cursor:pointer;" onclick="openBudgetModal()">Set monthly budgets</span>
   </div>
 
   <!-- Charts -->
@@ -235,6 +287,18 @@
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-save" onclick="saveExpense()">Save</button>
     </div>
+  </div>
+</div>
+
+<!-- Budget Settings Modal -->
+<div class="budget-modal-overlay" id="budgetModal" onclick="closeBudgetModalOnBg(event)">
+  <div class="budget-modal">
+    <div class="budget-modal-header">
+      <div class="budget-modal-title">Set Monthly Budgets</div>
+      <button class="budget-modal-close" onclick="closeBudgetModal()">x</button>
+    </div>
+    <div id="budgetInputRows"></div>
+    <button class="budget-save-btn" onclick="saveBudgets()">Save Budgets</button>
   </div>
 </div>
 
@@ -353,6 +417,114 @@ function parseSms(text) {
   };
 }
 
+// ---- BUDGET STORAGE ----
+const BUDGET_KEY = 'kharcha_budgets';
+
+function loadBudgets() {
+  try {
+    return JSON.parse(localStorage.getItem(BUDGET_KEY) || '{}');
+  } catch(e) { return {}; }
+}
+
+function saveBudgetsToStorage(budgets) {
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(budgets));
+}
+
+// ---- BUDGET MODAL ----
+function openBudgetModal() {
+  const budgets = loadBudgets();
+  const rows = CATEGORIES.filter(c => c.id !== 'other');
+  document.getElementById('budgetInputRows').innerHTML = rows.map(c =>
+    '<div class="budget-row">' +
+    '<div class="budget-row-icon" style="background:' + c.color + '22">' + c.icon + '</div>' +
+    '<div class="budget-row-label">' + c.label + '</div>' +
+    '<input class="budget-input" type="number" inputmode="decimal" placeholder="No limit"' +
+    ' id="budget-inp-' + c.id + '" value="' + (budgets[c.id] || '') + '" />' +
+    '</div>'
+  ).join('');
+  document.getElementById('budgetModal').classList.add('open');
+}
+
+function closeBudgetModal() {
+  document.getElementById('budgetModal').classList.remove('open');
+}
+
+function closeBudgetModalOnBg(e) {
+  if (e.target === document.getElementById('budgetModal')) closeBudgetModal();
+}
+
+function saveBudgets() {
+  const budgets = {};
+  CATEGORIES.filter(c => c.id !== 'other').forEach(c => {
+    const val = parseFloat(document.getElementById('budget-inp-' + c.id).value);
+    if (val && val > 0) budgets[c.id] = val;
+  });
+  saveBudgetsToStorage(budgets);
+  closeBudgetModal();
+  render();
+  showToast('Budgets saved', 'success');
+}
+
+// ---- BUDGET RENDERING ----
+function getBudgetStatus(spent, limit) {
+  const pct = spent / limit;
+  if (pct >= 1) return 'over';
+  if (pct >= 0.8) return 'warn';
+  return 'ok';
+}
+
+function renderBudgets(debits) {
+  const budgets = loadBudgets();
+  const keys = Object.keys(budgets);
+  const section = document.getElementById('budgetSection');
+
+  if (keys.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+
+  // Tally spending per category for this month
+  const catSpend = {};
+  debits.forEach(e => { catSpend[e.category] = (catSpend[e.category] || 0) + e.amount; });
+
+  const cards = keys.map(catId => {
+    const cat = CAT_MAP[catId] || { label: catId, icon: '?', color: '#9090A8' };
+    const spent = catSpend[catId] || 0;
+    const limit = budgets[catId];
+    const pct = Math.min(spent / limit, 1);
+    const status = getBudgetStatus(spent, limit);
+    const statusLabel = status === 'over' ? 'Over budget' : (status === 'warn' ? 'Near limit' : 'On track');
+    const fillWidth = Math.round(pct * 100);
+
+    return '<div class="budget-card ' + status + '">' +
+      '<div class="budget-card-top">' +
+      '<div class="budget-card-icon" style="background:' + cat.color + '22">' + cat.icon + '</div>' +
+      '<div class="budget-card-name">' + cat.label + '</div>' +
+      '<div class="budget-card-status ' + status + '">' + statusLabel + '</div>' +
+      '</div>' +
+      '<div class="budget-bar-track"><div class="budget-bar-fill ' + status + '" style="width:' + fillWidth + '%"></div></div>' +
+      '<div class="budget-card-amounts">' +
+      '<span class="spent">Rs.' + spent.toLocaleString('en-IN', {maximumFractionDigits: 0}) + ' spent</span>' +
+      '<span>of Rs.' + limit.toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</span>' +
+      '</div>' +
+      '</div>';
+  });
+
+  document.getElementById('budgetCards').innerHTML = cards.join('');
+
+  // Alert user about over-budget categories for the current month only
+  const now = new Date();
+  const isCurrentMonth = currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth();
+  if (isCurrentMonth) {
+    const overCats = keys.filter(catId => (catSpend[catId] || 0) > budgets[catId]);
+    if (overCats.length > 0) {
+      const names = overCats.map(id => CAT_MAP[id]?.label || id).join(', ');
+      showToast('Over budget: ' + names, 'error');
+    }
+  }
+}
+
 // ---- ANDROID BRIDGE ----
 // Android app calls this function when a new SMS arrives
 window.onSmsReceived = function(smsBody) {
@@ -411,6 +583,7 @@ function render() {
 
   renderBarChart(debits, daysInMonth);
   renderDonut(debits);
+  renderBudgets(debits);
   renderFilters();
   renderTxList();
 }

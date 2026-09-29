@@ -774,7 +774,7 @@ function renderTxList() {
     const timeStr = date.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'});
     const badge = e.source === 'sms' ? ' (SMS)' : '';
     const recurBadge = (window._recurringIds && window._recurringIds.has(String(e.id))) ? '<span class="recurring-badge">Recurring</span>' : '';
-    return '<div class="tx-item"><div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + (e.merchant || 'Unknown') + recurBadge + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + e.bank : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div><button class="tx-delete" onclick="deleteExpense(\'' + e.id + '\')">x</button></div>';
+    return '<div class="tx-item"><div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + escapeHtml(e.merchant || 'Unknown') + recurBadge + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + escapeHtml(e.bank) : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div><button class="tx-delete" onclick="deleteExpense(\'' + e.id + '\')">x</button></div>';
   }).join('');
 }
 

@@ -542,8 +542,8 @@ function addSmsExpenses(items) {
 window.onSmsReceived = function(smsBody) {
   const parsed = parseSms(smsBody);
   if (!parsed) return;
-  expenses.unshift(parsed);
-  save();
+  parsed.smsKey = buildSmsKey(smsBody, parsed.date);
+  if (addSmsExpenses([parsed]) === 0) return;
   render();
   showToast('SMS logged: Rs.' + parsed.amount + ' - ' + parsed.merchant, 'success');
 };

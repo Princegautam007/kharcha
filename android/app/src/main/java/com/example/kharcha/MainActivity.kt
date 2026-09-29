@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
-import android.provider.Telephony
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -25,7 +24,14 @@ class MainActivity : AppCompatActivity() {
     private val bankSenders = listOf(
         "hdfc", "sbi", "icici", "axis", "kotak", "pnb", "bob", "paytm",
         "phonepe", "gpay", "yesbank", "idfc", "federal", "union", "canara",
-        "ubi", "iob", "uco", "alert", "txn", "debit", "credit", "bank"
+        "ubi", "iob", "uco", "alert", "txn", "debit", "credit", "bank",
+        "phonpe", "pytm", "canbnk"
+    )
+
+    private val amountMarkers = listOf("rs.", "rs ", "inr", "debited", "credited")
+
+    private val transactionWords = listOf(
+        "debited", "credited", "spent", "withdrawn", "paid to", "upi", "a/c", "txn"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +41,17 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         setupWebView()
         checkSmsPermission()
+
+        // Let SmsReceiver reach this screen while the app is open.
+        // Without this, SmsReceiver finds no screen and drops every new SMS.
+        MainActivityRef.instance = this
+    }
+
+    override fun onDestroy() {
+        // Only clear the reference if it still points at this screen.
+        if (MainActivityRef.instance === this) MainActivityRef.instance = null
+        webView.destroy()
+        super.onDestroy()
     }
 
     private fun setupWebView() {
@@ -42,8 +59,10 @@ class MainActivity : AppCompatActivity() {
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true      // for localStorage
         settings.databaseEnabled = true
-        settings.allowFileAccessFromFileURLs = true
-        settings.allowUniversalAccessFromFileURLs = true
+        // The app only loads its own page from the assets folder, so it does not
+        // need to read other files or other sites from a file page.
+        settings.allowFileAccessFromFileURLs = false
+        settings.allowUniversalAccessFromFileURLs = false
         settings.setSupportZoom(false)
         settings.builtInZoomControls = false
         settings.displayZoomControls = false
@@ -139,7 +158,11 @@ class MainActivity : AppCompatActivity() {
             }
 
             runOnUiThread {
-                val json = smsList.toString().replace("'", "\\'")
+                // Older WebViews treat these two characters as line breaks inside
+                // a string, so write them out as escape codes.
+                val json = smsList.toString()
+                    .replace("\u2028", "\\u2028")
+                    .replace("\u2029", "\\u2029")
                 webView.evaluateJavascript(
                     "window.onSmsHistoryReceived($json)", null
                 )
@@ -151,24 +174,35 @@ class MainActivity : AppCompatActivity() {
     fun onNewSms(body: String, address: String) {
         if (!isBankSms(address, body)) return
         runOnUiThread {
-            val escaped = body.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
-            webView.evaluateJavascript(
-                "window.onSmsReceived('$escaped')", null
-            )
+            // JSONObject.quote turns the text into a safe JavaScript string.
+            // It handles quotes, new lines, carriage returns and line separators.
+            // If the page has not finished loading yet, nothing happens here.
+            // The SMS is picked up by the history import instead, and the web
+            // app skips it if it was already saved.
+            val js = "if (typeof window.onSmsReceived === 'function') " +
+                "window.onSmsReceived(${JSONObject.quote(body)})"
+            webView.evaluateJavascript(js, null)
         }
     }
 
     private fun isBankSms(address: String, body: String): Boolean {
         val lowerAddr = address.lowercase()
         val lowerBody = body.lowercase()
-        // Must look like a transaction SMS
-        val hasAmount = lowerBody.contains("rs.") || lowerBody.contains("rs ") ||
-            lowerBody.contains("inr") || lowerBody.contains("debited") ||
-            lowerBody.contains("credited")
-        val isBankSender = bankSenders.any { lowerAddr.contains(it) }
+
+        // OTP and password messages are never transactions
         val isOtp = lowerBody.contains("otp") || lowerBody.contains("password") ||
             lowerBody.contains("verification code")
-        return hasAmount && (isBankSender || hasAmount) && !isOtp
+        if (isOtp) return false
+
+        // The SMS must mention an amount
+        val hasAmount = amountMarkers.any { lowerBody.contains(it) }
+        if (!hasAmount) return false
+
+        // It must also come from a known bank sender, or use words that banks
+        // use for a transaction. This keeps out shop offers such as "Rs 100 off".
+        val isBankSender = bankSenders.any { lowerAddr.contains(it) }
+        val hasTransactionWord = transactionWords.any { lowerBody.contains(it) }
+        return isBankSender || hasTransactionWord
     }
 
     inner class SmsJsBridge {

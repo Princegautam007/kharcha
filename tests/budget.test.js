@@ -168,6 +168,13 @@ test('restored budgets never replace a budget already saved', () => {
   assertJsonEqual(app.__kharcha.loadBudgets(), { food: 5000, fuel: 2000 });
 });
 
+test('restore messages use singular wording for one transaction', () => {
+  const app = loadApp();
+  assert.equal(app.__kharcha.restoreMessage(0, 0), 'Nothing new to restore');
+  assert.equal(app.__kharcha.restoreMessage(1, 1), 'Restored 1 transaction and 1 budget');
+  assert.equal(app.__kharcha.restoreMessage(2, 3), 'Restored 2 transactions and 3 budgets');
+});
+
 test('backup export includes saved budgets', () => {
   const app = loadApp();
   app.__kharcha.saveBudgets({ food: 5000, fuel: 2000 });

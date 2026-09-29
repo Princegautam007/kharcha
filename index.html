@@ -537,6 +537,32 @@ function addSmsExpenses(items) {
   return added;
 }
 
+// ---- REPAIR OLD DATA ----
+// Earlier versions saved every imported SMS under the month being viewed, even
+// when the SMS was from another month. This moves those entries to the right
+// month once. Running it again does nothing.
+function repairMisfiledSms() {
+  const moved = [];
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && /^kharcha_\d{4}_\d+$/.test(key)) keys.push(key);
+  }
+  keys.forEach(key => {
+    let list;
+    try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { return; }
+    const keep = list.filter(e => {
+      const misfiled = e.source === 'sms' && monthKeyFor(e.date) !== key;
+      if (misfiled) moved.push(e);
+      return !misfiled;
+    });
+    if (keep.length !== list.length) localStorage.setItem(key, JSON.stringify(keep));
+  });
+  if (moved.length === 0) return;
+  load();
+  addSmsExpenses(moved);
+}
+
 // ---- ANDROID BRIDGE ----
 // Android app calls this function when a new SMS arrives
 window.onSmsReceived = function(smsBody) {
@@ -801,6 +827,7 @@ function showToast(msg, type) {
 
 // ---- INIT ----
 load();
+repairMisfiledSms();
 window._recurringIds = new Set();
 // Show SMS banner on non-Android browsers
 if (!/Android/i.test(navigator.userAgent)) {

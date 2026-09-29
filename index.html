@@ -733,7 +733,7 @@ function renderRecurring() {
     return '<div class="recurring-item">' +
       '<div class="recurring-icon" style="background:' + cat.color + '22">' + cat.icon + '</div>' +
       '<div class="recurring-info">' +
-        '<div class="recurring-name">' + item.merchant + '</div>' +
+        '<div class="recurring-name">' + escapeHtml(item.merchant) + '</div>' +
         '<div class="recurring-meta">' + cat.label + ' &middot; ' + dayLabel + '</div>' +
       '</div>' +
       '<div>' +

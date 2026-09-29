@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
@@ -19,6 +20,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private val SMS_PERMISSION_CODE = 101
+    private val NOTIFICATION_PERMISSION_CODE = 102
 
     // Banks and keywords we care about - ignore marketing SMS
     private val bankSenders = listOf(
@@ -40,6 +42,7 @@ class MainActivity : AppCompatActivity() {
 
         webView = findViewById(R.id.webView)
         setupWebView()
+        NotificationHelper.createChannel(this)
         checkSmsPermission()
 
         // Let SmsReceiver reach this screen while the app is open.
@@ -105,6 +108,23 @@ class MainActivity : AppCompatActivity() {
                 ),
                 SMS_PERMISSION_CODE
             )
+        } else {
+            checkNotificationPermission()
+        }
+    }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                NOTIFICATION_PERMISSION_CODE
+            )
         }
     }
 
@@ -119,6 +139,10 @@ class MainActivity : AppCompatActivity() {
             grantResults[0] == PackageManager.PERMISSION_GRANTED
         ) {
             loadSmsHistory()
+        }
+
+        if (requestCode == SMS_PERMISSION_CODE) {
+            checkNotificationPermission()
         }
     }
 

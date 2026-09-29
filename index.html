@@ -954,6 +954,97 @@ function exportBackup() {
   showToast('Backup downloaded', 'success');
 }
 
+// Checks one entry from a backup file and returns a clean copy, or null if it
+// is not usable. A backup file can come from anywhere, so nothing is trusted.
+function cleanBackupEntry(e) {
+  if (!e || typeof e !== 'object') return null;
+  const amount = Number(e.amount);
+  const when = new Date(e.date);
+  if (!isFinite(amount) || amount <= 0 || isNaN(when.getTime())) return null;
+  if (e.type !== 'debit' && e.type !== 'credit') return null;
+  const id = Number(e.id);
+  const clean = {
+    id: isFinite(id) ? id : Date.now() + Math.random(),
+    amount,
+    type: e.type,
+    merchant: String(e.merchant || 'Unknown').slice(0, 60),
+    category: CAT_MAP[e.category] ? e.category : 'other',
+    date: when.toISOString(),
+    source: e.source === 'sms' ? 'sms' : 'manual',
+  };
+  if (e.bank) clean.bank = String(e.bank).slice(0, 30);
+  if (typeof e.smsKey === 'string' && /^[a-z0-9_-]+$/i.test(e.smsKey)) clean.smsKey = e.smsKey;
+  return clean;
+}
+
+// Adds restored entries to the month each one belongs to. Entries that are
+// already saved are skipped. Returns how many were new.
+function mergeRestored(items) {
+  const byMonth = {};
+  items.forEach(item => {
+    const key = monthKeyFor(item.date);
+    (byMonth[key] = byMonth[key] || []).push(item);
+  });
+
+  let added = 0;
+  Object.keys(byMonth).forEach(key => {
+    const list = readBucket(key).slice();
+    const ids = new Set(list.map(e => String(e.id)));
+    const smsKeys = new Set(list.filter(e => e.smsKey).map(e => e.smsKey));
+    const before = list.length;
+    byMonth[key].forEach(item => {
+      if (ids.has(String(item.id))) return;
+      if (item.smsKey && smsKeys.has(item.smsKey)) return;
+      ids.add(String(item.id));
+      if (item.smsKey) smsKeys.add(item.smsKey);
+      list.push(item);
+    });
+    if (list.length === before) return;
+    added += list.length - before;
+    list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    writeBucket(key, list);
+  });
+  return added;
+}
+
+// Reads a backup file chosen by the person and adds its transactions.
+// Nothing that is already saved is changed or removed.
+function restoreBackup(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('That file is too large to be a backup', 'error');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const backup = JSON.parse(String(reader.result));
+      if (!backup || backup.app !== 'kharcha' || !backup.data || typeof backup.data !== 'object') {
+        throw new Error('not a backup');
+      }
+      const items = [];
+      Object.keys(backup.data).forEach(key => {
+        if (!/^kharcha_\d{4}_\d+$/.test(key) || !Array.isArray(backup.data[key])) return;
+        backup.data[key].forEach(entry => {
+          const clean = cleanBackupEntry(entry);
+          if (clean) items.push(clean);
+        });
+      });
+      const added = mergeRestored(items);
+      render();
+      showToast(added === 0 ? 'Nothing new to restore' : 'Restored ' + added + ' transactions', 'success');
+    } catch(err) {
+      showToast('That is not a Kharcha backup file', 'error');
+    }
+  };
+  reader.onerror = () => showToast('Could not read that file', 'error');
+  reader.readAsText(file);
+  input.value = '';
+}
+
 // ---- TOAST ----
 function showToast(msg, type) {
   const t = document.getElementById('toast');

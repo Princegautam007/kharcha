@@ -1,0 +1,17 @@
+# Android build outputs
+android/.gradle/
+android/app/build/
+android/local.properties
+android/*.iml
+android/.idea/
+
+# Memory folder - local only, never push
+memory/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node (if added later)
+node_modules/
+dist/

@@ -778,12 +778,31 @@ function selectCat(id) {
   buildCatGrid();
 }
 
+// Turns a Date into the YYYY-MM-DD text that a date input uses.
+function toDateInputValue(d) {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
 function openModal() {
   selectedModalCat = 'other';
   buildCatGrid();
   document.getElementById('inp-amount').value = '';
   document.getElementById('inp-desc').value = '';
   document.getElementById('inp-type').value = 'debit';
+
+  // Only allow dates inside the month being viewed. In the current month,
+  // do not allow dates after today.
+  const today = new Date();
+  const first = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const last = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+  const latest = (first <= today && last > today) ? today : last;
+  const dateInput = document.getElementById('inp-date');
+  dateInput.min = toDateInputValue(first);
+  dateInput.max = toDateInputValue(latest);
+  dateInput.value = toDateInputValue(latest);
+
   document.getElementById('modal').classList.add('open');
   setTimeout(() => document.getElementById('inp-amount').focus(), 100);
 }

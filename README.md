@@ -62,9 +62,11 @@ kharcha/
 
 ## Running the web app
 
-Open `index.html` in any browser. Works as a standalone PWA on desktop and mobile.
+Use it online at [princegautam007.github.io/kharcha](https://princegautam007.github.io/kharcha), or open `index.html` in any browser. You can also install it on your phone or computer and use it offline. Steps are in [docs/install-as-app.md](docs/install-as-app.md).
 
-On a non-Android device the SMS reading is not available and a banner tells the user to use the Android app.
+On a non-Android device the SMS reading is not available and a banner tells the user to use the Android app. You can still add expenses by hand.
+
+The site is published automatically to GitHub Pages every time `main` changes.
 
 ---
 

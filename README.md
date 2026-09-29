@@ -2,7 +2,7 @@
 
 Track every rupee. Zero effort.
 
-Kharcha reads your bank SMS automatically and turns them into a clean spending dashboard. No manual entry. No syncing bank accounts. No privacy risk. Your data stays on your phone.
+Kharcha reads your bank SMS automatically and turns them into a clean spending dashboard. No manual entry. No syncing bank accounts. No account, no login, no server. Your data stays on your phone.
 
 ---
 
@@ -20,8 +20,11 @@ Your bank sends you an SMS every time money moves. Kharcha intercepts those SMS 
 - Category donut chart so you know where money is going
 - Month-by-month navigation
 - Filter transactions by category
-- Manual add option when you pay cash
-- Works offline, data stays on your device
+- Recurring payment detection (rent, subscriptions and bills are flagged and listed together)
+- Manual add option when you pay cash, with a date you can choose
+- Never logs the same SMS twice, even if it arrives live and again in the SMS history
+- Install it as an app and use it offline
+- Data stays on your device
 
 ---
 
@@ -40,6 +43,11 @@ The web app and Android app share one codebase. The SMS parsing logic lives in `
 ```
 kharcha/
   index.html              the full web app
+  manifest.json           app name, colours and icons for installing
+  sw.js                   saves the app files so it works offline
+  icons/                  app icons
+  LICENSE                 MIT license
+  .github/workflows/      publishes the site to GitHub Pages
   android/                Android wrapper app
     app/src/main/
       java/com/example/kharcha/
@@ -48,16 +56,17 @@ kharcha/
       AndroidManifest.xml permissions and receiver registration
       res/layout/         activity layout
   docs/                   documentation
-  memory/                 project logs and roadmap
 ```
 
 ---
 
 ## Running the web app
 
-Open `index.html` in any browser. Works as a standalone PWA on desktop and mobile.
+Use it online at [princegautam007.github.io/kharcha](https://princegautam007.github.io/kharcha), or open `index.html` in any browser. You can also install it on your phone or computer and use it offline. Steps are in [docs/install-as-app.md](docs/install-as-app.md).
 
-On a non-Android device the SMS reading is not available and a banner tells the user to use the Android app.
+On a non-Android device the SMS reading is not available and a banner tells the user to use the Android app. You can still add expenses by hand.
+
+The site is published automatically to GitHub Pages every time `main` changes.
 
 ---
 
@@ -79,9 +88,17 @@ READ_SMS and RECEIVE_SMS are sensitive permissions. Google Play requires apps us
 
 ## Supported banks
 
-HDFC, SBI, ICICI, Axis, Kotak, PNB, Bank of Baroda, Yes Bank, IDFC First, Federal Bank, Union Bank, Canara Bank, Indian Overseas Bank, UCO Bank, Paytm, PhonePe, Google Pay
+The parser finds the amount, debit or credit, and merchant in most Indian bank SMS, including UPI, card, NEFT/IMPS and net banking alerts. It also shows the bank name for these senders:
 
-The parser handles all common Indian bank SMS formats including UPI credit/debit, card transactions, NEFT/IMPS transfers, and net banking alerts.
+HDFC, SBI, ICICI, Axis, Kotak, PNB, Bank of Baroda, Yes Bank, IDFC First, Federal Bank, Union Bank, Paytm, PhonePe, Google Pay
+
+For other banks the transaction is still logged, but the bank name may be missing. OTP and password messages are always ignored.
+
+---
+
+## Where your data is kept
+
+Each month is saved in the browser storage of your device under its own key, for example `kharcha_2026_9`. Nothing is uploaded anywhere. If you clear site data or uninstall the app, your expenses are removed.
 
 ---
 

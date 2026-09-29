@@ -637,6 +637,81 @@ function changeMonth(dir) {
   render();
 }
 
+// ---- BUDGETS ----
+// One monthly limit per category. They are saved together under the key
+// kharcha_budgets, for example { "food": 5000, "fuel": 2000 }.
+// This key is not a month key, so the month helpers skip it.
+const BUDGET_KEY = 'kharcha_budgets';
+const BUDGET_WARN_PERCENT = 80;
+const BUDGET_MAX = 100000000; // guards against a typing mistake
+
+// Returns a clean copy of a budgets object. Only known categories with a
+// positive number are kept. Anything else is dropped, because the data can
+// come from storage or from a backup file.
+function cleanBudgets(raw) {
+  const clean = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return clean;
+  CATEGORIES.forEach(c => {
+    if (!Object.prototype.hasOwnProperty.call(raw, c.id)) return;
+    const value = raw[c.id];
+    if (typeof value === 'string' && value.trim() === '') return;
+    if (typeof value !== 'number' && typeof value !== 'string') return;
+    const n = Number(value);
+    if (!isFinite(n) || n <= 0 || n > BUDGET_MAX) return;
+    clean[c.id] = Math.round(n * 100) / 100;
+  });
+  return clean;
+}
+
+function loadBudgets() {
+  try {
+    return cleanBudgets(JSON.parse(localStorage.getItem(BUDGET_KEY) || '{}'));
+  } catch(e) { return {}; }
+}
+
+function saveBudgets(budgets) {
+  const clean = cleanBudgets(budgets);
+  if (Object.keys(clean).length === 0) localStorage.removeItem(BUDGET_KEY);
+  else localStorage.setItem(BUDGET_KEY, JSON.stringify(clean));
+}
+
+// Adds up debit amounts for each category. Unknown categories count as other.
+function spentByCategory(debits) {
+  const totals = {};
+  debits.forEach(e => {
+    const id = CAT_MAP[e.category] ? e.category : 'other';
+    totals[id] = (totals[id] || 0) + (Number(e.amount) || 0);
+  });
+  return totals;
+}
+
+// level is ok, warn (80 percent or more used) or over (more than the limit).
+// percent is for the progress bar and never goes past 100.
+function budgetStatus(spent, limit) {
+  let level = 'ok';
+  if (spent > limit) level = 'over';
+  else if (spent * 100 >= limit * BUDGET_WARN_PERCENT) level = 'warn';
+  const percent = Math.min(100, Math.floor(spent * 100 / limit));
+  return { level, percent, left: limit - spent };
+}
+
+// Turns the text typed in the budget form into a budgets object.
+// values maps a category id to the text in its box. An empty box means no
+// budget. Returns { budgets } or { error } naming the first bad box.
+function readBudgetInputs(values) {
+  const budgets = {};
+  for (const c of CATEGORIES) {
+    const text = String(values[c.id] == null ? '' : values[c.id]).trim();
+    if (text === '') continue;
+    const n = Number(text);
+    if (!isFinite(n) || n <= 0 || n > BUDGET_MAX) {
+      return { error: 'Enter a valid budget for ' + c.label };
+    }
+    budgets[c.id] = Math.round(n * 100) / 100;
+  }
+  return { budgets };
+}
+
 // ---- RENDER ----
 function render() {
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];

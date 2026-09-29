@@ -25,7 +25,14 @@ class MainActivity : AppCompatActivity() {
     private val bankSenders = listOf(
         "hdfc", "sbi", "icici", "axis", "kotak", "pnb", "bob", "paytm",
         "phonepe", "gpay", "yesbank", "idfc", "federal", "union", "canara",
-        "ubi", "iob", "uco", "alert", "txn", "debit", "credit", "bank"
+        "ubi", "iob", "uco", "alert", "txn", "debit", "credit", "bank",
+        "phonpe", "pytm", "canbnk"
+    )
+
+    private val amountMarkers = listOf("rs.", "rs ", "inr", "debited", "credited")
+
+    private val transactionWords = listOf(
+        "debited", "credited", "spent", "withdrawn", "paid to", "upi", "a/c", "txn"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -180,14 +187,21 @@ class MainActivity : AppCompatActivity() {
     private fun isBankSms(address: String, body: String): Boolean {
         val lowerAddr = address.lowercase()
         val lowerBody = body.lowercase()
-        // Must look like a transaction SMS
-        val hasAmount = lowerBody.contains("rs.") || lowerBody.contains("rs ") ||
-            lowerBody.contains("inr") || lowerBody.contains("debited") ||
-            lowerBody.contains("credited")
-        val isBankSender = bankSenders.any { lowerAddr.contains(it) }
+
+        // OTP and password messages are never transactions
         val isOtp = lowerBody.contains("otp") || lowerBody.contains("password") ||
             lowerBody.contains("verification code")
-        return hasAmount && (isBankSender || hasAmount) && !isOtp
+        if (isOtp) return false
+
+        // The SMS must mention an amount
+        val hasAmount = amountMarkers.any { lowerBody.contains(it) }
+        if (!hasAmount) return false
+
+        // It must also come from a known bank sender, or use words that banks
+        // use for a transaction. This keeps out shop offers such as "Rs 100 off".
+        val isBankSender = bankSenders.any { lowerAddr.contains(it) }
+        val hasTransactionWord = transactionWords.any { lowerBody.contains(it) }
+        return isBankSender || hasTransactionWord
     }
 
     inner class SmsJsBridge {

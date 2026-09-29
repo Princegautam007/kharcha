@@ -150,7 +150,11 @@ class MainActivity : AppCompatActivity() {
             }
 
             runOnUiThread {
-                val json = smsList.toString().replace("'", "\\'")
+                // Older WebViews treat these two characters as line breaks inside
+                // a string, so write them out as escape codes.
+                val json = smsList.toString()
+                    .replace("\u2028", "\\u2028")
+                    .replace("\u2029", "\\u2029")
                 webView.evaluateJavascript(
                     "window.onSmsHistoryReceived($json)", null
                 )

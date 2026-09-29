@@ -551,19 +551,22 @@ window.onSmsReceived = function(smsBody) {
 // Android calls this to inject multiple SMS on first launch
 window.onSmsHistoryReceived = function(smsArray) {
   if (!Array.isArray(smsArray)) return;
-  let added = 0;
+  const items = [];
   smsArray.forEach(sms => {
-    const parsed = parseSms(typeof sms === 'string' ? sms : sms.body);
-    if (parsed) {
-      if (sms.date) parsed.date = new Date(sms.date).toISOString();
-      expenses.push(parsed);
-      added++;
-    }
+    const body = typeof sms === 'string' ? sms : (sms && sms.body);
+    const parsed = parseSms(body);
+    if (!parsed) return;
+    const when = sms && sms.date ? new Date(sms.date) : null;
+    if (when && !isNaN(when.getTime())) parsed.date = when.toISOString();
+    parsed.smsKey = buildSmsKey(body, parsed.date);
+    items.push(parsed);
   });
-  expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
-  save();
+  const added = addSmsExpenses(items);
   render();
-  showToast('Imported ' + added + ' transactions from SMS', 'success');
+  showToast(
+    added === 0 ? 'No new transactions found in SMS' : 'Imported ' + added + ' new transactions from SMS',
+    'success'
+  );
 };
 
 // ---- MONTH NAV ----

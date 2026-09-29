@@ -20,8 +20,11 @@ Your bank sends you an SMS every time money moves. Kharcha intercepts those SMS 
 - Category donut chart so you know where money is going
 - Month-by-month navigation
 - Filter transactions by category
-- Manual add option when you pay cash
-- Works offline, data stays on your device
+- Recurring payment detection (rent, subscriptions and bills are flagged and listed together)
+- Manual add option when you pay cash, with a date you can choose
+- Never logs the same SMS twice, even if it arrives live and again in the SMS history
+- Install it as an app and use it offline
+- Data stays on your device
 
 ---
 

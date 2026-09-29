@@ -885,6 +885,58 @@ function deleteExpense(id) {
   render();
 }
 
+// ---- EXPORT AND BACKUP ----
+// Saves text as a file. Works in browsers and in the installed web app.
+function downloadFile(filename, text, mimeType) {
+  const blob = new Blob([text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Wraps a value for a CSV file. Text that starts like a spreadsheet formula
+// gets a leading apostrophe so Excel or Sheets will not run it.
+function csvCell(value) {
+  let text = String(value == null ? '' : value);
+  if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+  return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function buildCsv(list) {
+  const rows = ['Date,Time,Type,Amount,Merchant,Category,Bank,Source'];
+  list.forEach(e => {
+    const d = new Date(e.date);
+    const time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const cat = CAT_MAP[e.category] || CAT_MAP.other;
+    rows.push([
+      toDateInputValue(d),
+      time,
+      e.type,
+      Number(e.amount),
+      csvCell(e.merchant),
+      csvCell(cat.label),
+      csvCell(e.bank || ''),
+      e.source || '',
+    ].join(','));
+  });
+  // The first character lets Excel open the file with the right text encoding.
+  return '\uFEFF' + rows.join('\r\n');
+}
+
+// Downloads the month being viewed as a CSV file.
+function exportCsv() {
+  if (expenses.length === 0) { showToast('Nothing to export this month', 'error'); return; }
+  const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+  const name = 'kharcha-' + currentDate.getFullYear() + '-' + month + '.csv';
+  downloadFile(name, buildCsv(expenses), 'text/csv;charset=utf-8');
+  showToast('CSV downloaded', 'success');
+}
+
 // ---- TOAST ----
 function showToast(msg, type) {
   const t = document.getElementById('toast');

@@ -503,6 +503,40 @@ function legacySignature(e) {
   return [e.amount, e.type, e.merchant, e.date].join('|');
 }
 
+// Adds parsed SMS expenses to the month each one belongs to.
+// Skips any that are already stored. Returns how many were new.
+function addSmsExpenses(items) {
+  const byMonth = {};
+  items.forEach(item => {
+    const key = monthKeyFor(item.date);
+    (byMonth[key] = byMonth[key] || []).push(item);
+  });
+
+  let added = 0;
+  Object.keys(byMonth).forEach(key => {
+    const list = readBucket(key).slice();
+    const seen = new Set();
+    list.forEach(e => {
+      if (e.smsKey) seen.add(e.smsKey);
+      else if (e.source === 'sms') seen.add(legacySignature(e));
+    });
+
+    const before = list.length;
+    byMonth[key].forEach(item => {
+      if (seen.has(legacySignature(item))) return;
+      if (item.smsKey && seen.has(item.smsKey)) return;
+      if (item.smsKey) seen.add(item.smsKey);
+      list.push(item);
+    });
+
+    if (list.length === before) return;
+    added += list.length - before;
+    list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    writeBucket(key, list);
+  });
+  return added;
+}
+
 // ---- ANDROID BRIDGE ----
 // Android app calls this function when a new SMS arrives
 window.onSmsReceived = function(smsBody) {

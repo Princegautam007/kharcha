@@ -2,7 +2,7 @@
 
 Track every rupee. Zero effort.
 
-Kharcha reads your bank SMS automatically and turns them into a clean spending dashboard. No manual entry. No syncing bank accounts. No privacy risk. Your data stays on your phone.
+Kharcha reads your bank SMS automatically and turns them into a clean spending dashboard. No manual entry. No syncing bank accounts. No account, no login, no server. Your data stays on your phone.
 
 ---
 

@@ -35,6 +35,17 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         setupWebView()
         checkSmsPermission()
+
+        // Let SmsReceiver reach this screen while the app is open.
+        // Without this, SmsReceiver finds no screen and drops every new SMS.
+        MainActivityRef.instance = this
+    }
+
+    override fun onDestroy() {
+        // Only clear the reference if it still points at this screen.
+        if (MainActivityRef.instance === this) MainActivityRef.instance = null
+        webView.destroy()
+        super.onDestroy()
     }
 
     private fun setupWebView() {

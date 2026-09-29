@@ -35,6 +35,8 @@ class SmsReceiver : BroadcastReceiver() {
 
 // Simple static reference to the active MainActivity
 // This is fine for a single-activity app
+// Volatile because the receiver and the screen can run on different threads.
 object MainActivityRef {
+    @Volatile
     var instance: MainActivity? = null
 }

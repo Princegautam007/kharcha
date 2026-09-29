@@ -137,6 +137,31 @@
     .data-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 4px; font-size: 13px; color: var(--text); cursor: pointer; }
     .data-btn:active { border-color: var(--primary); }
 
+    /* BUDGETS */
+    .budget-section { margin-bottom: 20px; }
+    .budget-set-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 5px 14px; font-size: 12px; color: var(--primary); cursor: pointer; }
+    .budget-set-btn:active { border-color: var(--primary); }
+    .budget-list { display: flex; flex-direction: column; gap: 8px; }
+    .budget-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    .budget-top { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 8px; }
+    .budget-name { font-weight: 600; }
+    .budget-amt { color: var(--text2); font-size: 12px; }
+    .budget-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+    .budget-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.3s; }
+    .budget-item.warn .budget-fill { background: var(--yellow); }
+    .budget-item.over .budget-fill { background: var(--red); }
+    .budget-note { font-size: 11px; color: var(--text2); margin-top: 6px; }
+    .budget-item.warn .budget-note { color: var(--yellow); }
+    .budget-item.over .budget-note { color: var(--red); }
+    .budget-empty { background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); padding: 14px; font-size: 12px; color: var(--text2); line-height: 1.5; }
+    .budget-modal { max-height: 90dvh; overflow-y: auto; }
+    .budget-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .budget-row-label { flex: 1; font-size: 14px; }
+    .budget-row input { width: 110px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 14px; outline: none; }
+    .budget-row input:focus { border-color: var(--primary); }
+    .budget-clear { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); border-radius: 8px; width: 34px; height: 34px; font-size: 16px; cursor: pointer; }
+    .budget-hint { font-size: 12px; color: var(--text2); margin-bottom: 14px; line-height: 1.5; }
+
     /* TOAST */
     .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; font-size: 14px; z-index: 999; transition: transform 0.3s; white-space: nowrap; }
     .toast.show { transform: translateX(-50%) translateY(0); }
@@ -184,6 +209,15 @@
   <div class="sms-banner" id="smsBanner" style="display:none">
     <div class="sms-banner-title">Auto SMS Reading</div>
     <div class="sms-banner-text">Open this app in the Kharcha Android app to enable automatic bank SMS reading. No manual input needed.</div>
+  </div>
+
+  <!-- Budgets -->
+  <div class="budget-section">
+    <div class="section-title">
+      <span>Budgets</span>
+      <button class="budget-set-btn" onclick="openBudgetModal()">Set</button>
+    </div>
+    <div class="budget-list" id="budgetList"></div>
   </div>
 
   <!-- Stats -->
@@ -275,6 +309,19 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-save" onclick="saveExpense()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Budget Modal -->
+<div class="modal-overlay" id="budgetModal" onclick="closeBudgetModalOnBg(event)">
+  <div class="modal budget-modal">
+    <div class="modal-title">Monthly Budgets</div>
+    <div class="budget-hint">Set a limit for each category. It applies to every month. Leave a box empty for no limit.</div>
+    <div id="budgetRows"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeBudgetModal()">Cancel</button>
+      <button class="btn-save" onclick="saveBudgetsFromModal()">Save</button>
     </div>
   </div>
 </div>
@@ -637,6 +684,81 @@ function changeMonth(dir) {
   render();
 }
 
+// ---- BUDGETS ----
+// One monthly limit per category. They are saved together under the key
+// kharcha_budgets, for example { "food": 5000, "fuel": 2000 }.
+// This key is not a month key, so the month helpers skip it.
+const BUDGET_KEY = 'kharcha_budgets';
+const BUDGET_WARN_PERCENT = 80;
+const BUDGET_MAX = 100000000; // guards against a typing mistake
+
+// Returns a clean copy of a budgets object. Only known categories with a
+// positive number are kept. Anything else is dropped, because the data can
+// come from storage or from a backup file.
+function cleanBudgets(raw) {
+  const clean = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return clean;
+  CATEGORIES.forEach(c => {
+    if (!Object.prototype.hasOwnProperty.call(raw, c.id)) return;
+    const value = raw[c.id];
+    if (typeof value === 'string' && value.trim() === '') return;
+    if (typeof value !== 'number' && typeof value !== 'string') return;
+    const n = Number(value);
+    if (!isFinite(n) || n <= 0 || n > BUDGET_MAX) return;
+    clean[c.id] = Math.round(n * 100) / 100;
+  });
+  return clean;
+}
+
+function loadBudgets() {
+  try {
+    return cleanBudgets(JSON.parse(localStorage.getItem(BUDGET_KEY) || '{}'));
+  } catch(e) { return {}; }
+}
+
+function saveBudgets(budgets) {
+  const clean = cleanBudgets(budgets);
+  if (Object.keys(clean).length === 0) localStorage.removeItem(BUDGET_KEY);
+  else localStorage.setItem(BUDGET_KEY, JSON.stringify(clean));
+}
+
+// Adds up debit amounts for each category. Unknown categories count as other.
+function spentByCategory(debits) {
+  const totals = {};
+  debits.forEach(e => {
+    const id = CAT_MAP[e.category] ? e.category : 'other';
+    totals[id] = (totals[id] || 0) + (Number(e.amount) || 0);
+  });
+  return totals;
+}
+
+// level is ok, warn (80 percent or more used) or over (more than the limit).
+// percent is for the progress bar and never goes past 100.
+function budgetStatus(spent, limit) {
+  let level = 'ok';
+  if (spent > limit) level = 'over';
+  else if (spent * 100 >= limit * BUDGET_WARN_PERCENT) level = 'warn';
+  const percent = Math.min(100, Math.floor(spent * 100 / limit));
+  return { level, percent, left: limit - spent };
+}
+
+// Turns the text typed in the budget form into a budgets object.
+// values maps a category id to the text in its box. An empty box means no
+// budget. Returns { budgets } or { error } naming the first bad box.
+function readBudgetInputs(values) {
+  const budgets = {};
+  for (const c of CATEGORIES) {
+    const text = String(values[c.id] == null ? '' : values[c.id]).trim();
+    if (text === '') continue;
+    const n = Number(text);
+    if (!isFinite(n) || n <= 0 || n > BUDGET_MAX) {
+      return { error: 'Enter a valid budget for ' + c.label };
+    }
+    budgets[c.id] = Math.round(n * 100) / 100;
+  }
+  return { budgets };
+}
+
 // ---- RENDER ----
 function render() {
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -656,11 +778,71 @@ function render() {
   document.getElementById('txCount').textContent = expenses.length + ' transactions';
   document.getElementById('avgSpend').textContent = 'avg Rs.' + Math.round(totalSpent / Math.max(daysPassed, 1)).toLocaleString('en-IN') + '/day';
 
+  renderBudgets(debits);
   renderBarChart(debits, daysInMonth);
   renderDonut(debits);
   renderRecurring();
   renderFilters();
   renderTxList();
+}
+
+function formatRs(n) {
+  return 'Rs.' + Math.round(n).toLocaleString('en-IN');
+}
+
+// Shows one progress bar for each category that has a budget.
+function renderBudgets(debits) {
+  const budgets = loadBudgets();
+  const spent = spentByCategory(debits);
+  const rows = CATEGORIES.filter(c => budgets[c.id]).map(c => {
+    const limit = budgets[c.id];
+    const used = spent[c.id] || 0;
+    const s = budgetStatus(used, limit);
+    let note = formatRs(s.left) + ' left';
+    if (s.level === 'warn') note = 'Almost at the limit. ' + note;
+    if (s.level === 'over') note = 'Over the budget by ' + formatRs(-s.left);
+    return '<div class="budget-item ' + s.level + '">' +
+      '<div class="budget-top"><span class="budget-name">' + c.icon + ' ' + escapeHtml(c.label) + '</span>' +
+      '<span class="budget-amt">' + formatRs(used) + ' of ' + formatRs(limit) + '</span></div>' +
+      '<div class="budget-track"><div class="budget-fill" style="width:' + s.percent + '%"></div></div>' +
+      '<div class="budget-note">' + note + '</div></div>';
+  });
+  document.getElementById('budgetList').innerHTML = rows.length
+    ? rows.join('')
+    : '<div class="budget-empty">No budgets yet. Tap Set to add a monthly limit for a category.</div>';
+}
+
+function openBudgetModal() {
+  const budgets = loadBudgets();
+  document.getElementById('budgetRows').innerHTML = CATEGORIES.map(c =>
+    '<div class="budget-row"><span class="budget-row-label">' + c.icon + ' ' + escapeHtml(c.label) + '</span>' +
+    '<input type="number" id="bud-' + c.id + '" inputmode="decimal" min="0" placeholder="No limit" value="' + (budgets[c.id] || '') + '" />' +
+    '<button class="budget-clear" onclick="clearBudgetInput(\'' + c.id + '\')" aria-label="Clear ' + escapeHtml(c.label) + ' budget">&times;</button></div>'
+  ).join('');
+  document.getElementById('budgetModal').classList.add('open');
+}
+
+function closeBudgetModal() {
+  document.getElementById('budgetModal').classList.remove('open');
+}
+
+function closeBudgetModalOnBg(e) {
+  if (e.target === document.getElementById('budgetModal')) closeBudgetModal();
+}
+
+function clearBudgetInput(id) {
+  document.getElementById('bud-' + id).value = '';
+}
+
+function saveBudgetsFromModal() {
+  const values = {};
+  CATEGORIES.forEach(c => { values[c.id] = document.getElementById('bud-' + c.id).value; });
+  const result = readBudgetInputs(values);
+  if (result.error) { showToast(result.error, 'error'); return; }
+  saveBudgets(result.budgets);
+  closeBudgetModal();
+  render();
+  showToast('Budgets saved', 'success');
 }
 
 function renderBarChart(debits, daysInMonth) {
@@ -948,8 +1130,11 @@ function exportBackup() {
       if (Array.isArray(list) && list.length > 0) data[key] = list;
     } catch(e) { /* skip a month that cannot be read */ }
   }
-  if (Object.keys(data).length === 0) { showToast('Nothing to back up yet', 'error'); return; }
+  const budgets = loadBudgets();
+  const hasBudgets = Object.keys(budgets).length > 0;
+  if (Object.keys(data).length === 0 && !hasBudgets) { showToast('Nothing to back up yet', 'error'); return; }
   const backup = { app: 'kharcha', version: 1, exportedAt: new Date().toISOString(), data };
+  if (hasBudgets) backup.budgets = budgets;
   downloadFile('kharcha-backup-' + toDateInputValue(new Date()) + '.json', JSON.stringify(backup, null, 2), 'application/json');
   showToast('Backup downloaded', 'success');
 }
@@ -1007,8 +1192,31 @@ function mergeRestored(items) {
   return added;
 }
 
-// Reads a backup file chosen by the person and adds its transactions.
-// Nothing that is already saved is changed or removed.
+// Adds restored budgets for categories that have no budget yet.
+// A budget that is already saved is never replaced. Returns how many were added.
+function mergeRestoredBudgets(incoming) {
+  const current = loadBudgets();
+  let added = 0;
+  Object.keys(incoming).forEach(id => {
+    if (current[id]) return;
+    current[id] = incoming[id];
+    added++;
+  });
+  if (added > 0) saveBudgets(current);
+  return added;
+}
+
+// Builds the message shown after a restore.
+function restoreMessage(transactions, budgets) {
+  if (transactions === 0 && budgets === 0) return 'Nothing new to restore';
+  const parts = [];
+  if (transactions > 0) parts.push(transactions + ' transactions');
+  if (budgets > 0) parts.push(budgets + (budgets === 1 ? ' budget' : ' budgets'));
+  return 'Restored ' + parts.join(' and ');
+}
+
+// Reads a backup file chosen by the person and adds its transactions and
+// budgets. Nothing that is already saved is changed or removed.
 function restoreBackup(event) {
   const input = event.target;
   const file = input.files && input.files[0];
@@ -1034,8 +1242,9 @@ function restoreBackup(event) {
         });
       });
       const added = mergeRestored(items);
+      const budgetsAdded = mergeRestoredBudgets(cleanBudgets(backup.budgets));
       render();
-      showToast(added === 0 ? 'Nothing new to restore' : 'Restored ' + added + ' transactions', 'success');
+      showToast(restoreMessage(added, budgetsAdded), 'success');
     } catch(err) {
       showToast('That is not a Kharcha backup file', 'error');
     }

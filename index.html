@@ -1237,7 +1237,7 @@ function mergeRestoredBudgets(incoming) {
 function restoreMessage(transactions, budgets) {
   if (transactions === 0 && budgets === 0) return 'Nothing new to restore';
   const parts = [];
-  if (transactions > 0) parts.push(transactions + ' transactions');
+  if (transactions > 0) parts.push(transactions + (transactions === 1 ? ' transaction' : ' transactions'));
   if (budgets > 0) parts.push(budgets + (budgets === 1 ? ' budget' : ' budgets'));
   return 'Restored ' + parts.join(' and ');
 }

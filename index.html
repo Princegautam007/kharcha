@@ -302,6 +302,18 @@ function save() {
   localStorage.setItem(storageKey(currentDate), JSON.stringify(expenses));
 }
 
+// ---- SAFE TEXT ----
+// Text from SMS, backups and the Add Expense box is shown inside HTML.
+// This turns characters like < and > into plain text so they cannot run as code.
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ---- SMS PARSING (called by Android bridge too) ----
 function parseSms(text) {
   if (!text) return null;

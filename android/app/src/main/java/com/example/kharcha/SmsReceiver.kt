@@ -6,8 +6,8 @@ import android.content.Intent
 import android.provider.Telephony
 
 // Listens for incoming SMS in real time.
-// Registered in AndroidManifest.xml with RECEIVE_SMS permission.
-// When a new SMS arrives, it passes the body to MainActivity
+// Parses transaction messages and shows a notification immediately.
+// When the app is open, it also passes the SMS to MainActivity
 // which then calls window.onSmsReceived() in the WebView.
 
 class SmsReceiver : BroadcastReceiver() {
@@ -27,8 +27,12 @@ class SmsReceiver : BroadcastReceiver() {
         val body = fullBody.toString()
         if (body.isBlank()) return
 
-        // Forward to MainActivity via a static reference
-        // In a real app, use a local broadcast or a ViewModel
+        val transaction = SmsParser.parse(body, address)
+        if (transaction != null) {
+            NotificationHelper.showTransactionNotification(context, transaction)
+        }
+
+        // Forward to MainActivity when the WebView is active.
         MainActivityRef.instance?.onNewSms(body, address)
     }
 }

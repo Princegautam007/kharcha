@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
-import android.provider.Telephony
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView

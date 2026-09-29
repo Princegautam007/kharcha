@@ -131,6 +131,12 @@
     .empty-icon { font-size: 48px; margin-bottom: 12px; }
     .empty-text { font-size: 14px; }
 
+    /* DATA */
+    .data-title { margin-top: 28px; }
+    .data-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 24px; }
+    .data-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 4px; font-size: 13px; color: var(--text); cursor: pointer; }
+    .data-btn:active { border-color: var(--primary); }
+
     /* TOAST */
     .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; font-size: 14px; z-index: 999; transition: transform 0.3s; white-space: nowrap; }
     .toast.show { transform: translateX(-50%) translateY(0); }
@@ -227,6 +233,15 @@
     <span id="filteredCount"></span>
   </div>
   <div class="tx-list" id="txList"></div>
+
+  <!-- Export and backup -->
+  <div class="section-title data-title"><span>Your data</span></div>
+  <div class="data-actions">
+    <button class="data-btn" onclick="exportCsv()">Download CSV</button>
+    <button class="data-btn" onclick="exportBackup()">Backup</button>
+    <button class="data-btn" onclick="document.getElementById('restoreInput').click()">Restore</button>
+  </div>
+  <input type="file" id="restoreInput" accept=".json,application/json" style="display:none" onchange="restoreBackup(event)" />
 
 </div>
 

@@ -459,6 +459,23 @@ function detectRecurring(currentExpenses) {
   return { recurringIds, recurringItems };
 }
 
+// ---- MONTH BUCKETS ----
+// Each month lives under its own localStorage key. These helpers let SMS data
+// go to the month the SMS was sent, not just the month being viewed.
+function monthKeyFor(iso) {
+  return storageKey(new Date(iso));
+}
+function readBucket(key) {
+  if (key === storageKey(currentDate)) return expenses;
+  try {
+    return JSON.parse(localStorage.getItem(key) || '[]');
+  } catch(e) { return []; }
+}
+function writeBucket(key, list) {
+  if (key === storageKey(currentDate)) expenses = list;
+  localStorage.setItem(key, JSON.stringify(list));
+}
+
 // ---- ANDROID BRIDGE ----
 // Android app calls this function when a new SMS arrives
 window.onSmsReceived = function(smsBody) {

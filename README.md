@@ -88,9 +88,17 @@ READ_SMS and RECEIVE_SMS are sensitive permissions. Google Play requires apps us
 
 ## Supported banks
 
-HDFC, SBI, ICICI, Axis, Kotak, PNB, Bank of Baroda, Yes Bank, IDFC First, Federal Bank, Union Bank, Canara Bank, Indian Overseas Bank, UCO Bank, Paytm, PhonePe, Google Pay
+The parser finds the amount, debit or credit, and merchant in most Indian bank SMS, including UPI, card, NEFT/IMPS and net banking alerts. It also shows the bank name for these senders:
 
-The parser handles all common Indian bank SMS formats including UPI credit/debit, card transactions, NEFT/IMPS transfers, and net banking alerts.
+HDFC, SBI, ICICI, Axis, Kotak, PNB, Bank of Baroda, Yes Bank, IDFC First, Federal Bank, Union Bank, Paytm, PhonePe, Google Pay
+
+For other banks the transaction is still logged, but the bank name may be missing. OTP and password messages are always ignored.
+
+---
+
+## Where your data is kept
+
+Each month is saved in the browser storage of your device under its own key, for example `kharcha_2026_9`. Nothing is uploaded anywhere. If you clear site data or uninstall the app, your expenses are removed.
 
 ---
 

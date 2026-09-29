@@ -937,6 +937,23 @@ function exportCsv() {
   showToast('CSV downloaded', 'success');
 }
 
+// Downloads every saved month in one JSON file.
+function exportBackup() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !/^kharcha_\d{4}_\d+$/.test(key)) continue;
+    try {
+      const list = JSON.parse(localStorage.getItem(key) || '[]');
+      if (Array.isArray(list) && list.length > 0) data[key] = list;
+    } catch(e) { /* skip a month that cannot be read */ }
+  }
+  if (Object.keys(data).length === 0) { showToast('Nothing to back up yet', 'error'); return; }
+  const backup = { app: 'kharcha', version: 1, exportedAt: new Date().toISOString(), data };
+  downloadFile('kharcha-backup-' + toDateInputValue(new Date()) + '.json', JSON.stringify(backup, null, 2), 'application/json');
+  showToast('Backup downloaded', 'success');
+}
+
 // ---- TOAST ----
 function showToast(msg, type) {
   const t = document.getElementById('toast');

@@ -111,6 +111,19 @@
     .tx-delete { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 16px; padding: 4px; opacity: 0.5; }
     .tx-delete:hover { opacity: 1; color: var(--red); }
 
+    /* RECURRING */
+    .recurring-section { margin-bottom: 20px; }
+    .recurring-section-header { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .recurring-list { display: flex; flex-direction: column; gap: 8px; }
+    .recurring-item { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius); padding: 14px; display: flex; align-items: center; gap: 12px; }
+    .recurring-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .recurring-info { flex: 1; min-width: 0; }
+    .recurring-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .recurring-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .recurring-amount { font-size: 15px; font-weight: 700; color: var(--red); flex-shrink: 0; text-align: right; }
+    .recurring-amount-sub { font-size: 11px; color: var(--text2); margin-top: 2px; text-align: right; }
+    .recurring-badge { display: inline-block; font-size: 10px; font-weight: 700; background: rgba(108,99,255,0.18); color: var(--primary); border-radius: 5px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; letter-spacing: 0.3px; }
+
     .empty { text-align: center; padding: 40px 20px; color: var(--text2); }
     .empty-icon { font-size: 48px; margin-bottom: 12px; }
     .empty-text { font-size: 14px; }
@@ -134,44 +147,6 @@
     .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .legend-label { color: var(--text2); flex: 1; }
     .legend-val { color: var(--text); font-weight: 600; }
-
-    /* BUDGET SETTINGS MODAL */
-    .budget-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; }
-    .budget-modal-overlay.open { display: flex; }
-    .budget-modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px 20px; width: 100%; max-width: 480px; margin: 0 auto; max-height: 85vh; overflow-y: auto; }
-    .budget-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .budget-modal-title { font-size: 17px; font-weight: 700; }
-    .budget-modal-close { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 4px; }
-    .budget-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-    .budget-row-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-    .budget-row-label { flex: 1; font-size: 14px; font-weight: 500; }
-    .budget-input { width: 110px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--text); font-size: 14px; outline: none; text-align: right; }
-    .budget-input:focus { border-color: var(--primary); }
-    .budget-input::placeholder { color: var(--text2); }
-    .budget-save-btn { width: 100%; background: var(--primary); color: #fff; border: none; border-radius: var(--radius); padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; }
-    .budget-save-btn:active { background: var(--primary-dark); }
-
-    /* BUDGET PROGRESS IN STATS */
-    .budget-section { margin-bottom: 20px; }
-    .budget-section-header { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
-    .budget-set-link { font-size: 12px; color: var(--primary); cursor: pointer; text-transform: none; letter-spacing: 0; }
-    .budget-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
-    .budget-card.warn { border-color: var(--yellow); }
-    .budget-card.over { border-color: var(--red); }
-    .budget-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .budget-card-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
-    .budget-card-name { flex: 1; font-size: 14px; font-weight: 600; }
-    .budget-card-status { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
-    .budget-card-status.ok { background: rgba(74,222,128,0.15); color: var(--green); }
-    .budget-card-status.warn { background: rgba(250,204,21,0.15); color: var(--yellow); }
-    .budget-card-status.over { background: rgba(255,92,92,0.15); color: var(--red); }
-    .budget-bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-    .budget-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
-    .budget-bar-fill.ok { background: var(--green); }
-    .budget-bar-fill.warn { background: var(--yellow); }
-    .budget-bar-fill.over { background: var(--red); }
-    .budget-card-amounts { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--text2); }
-    .budget-card-amounts .spent { font-weight: 600; color: var(--text); }
 
     /* SMS BANNER */
     .sms-banner { background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(108,99,255,0.05)); border: 1px solid rgba(108,99,255,0.4); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
@@ -202,15 +177,6 @@
     <div class="sms-banner-text">Open this app in the Kharcha Android app to enable automatic bank SMS reading. No manual input needed.</div>
   </div>
 
-  <!-- Budget Overview Section (shown only when at least one budget is set) -->
-  <div class="budget-section" id="budgetSection" style="display:none">
-    <div class="budget-section-header">
-      <span>Budget</span>
-      <span class="budget-set-link" onclick="openBudgetModal()">Edit budgets</span>
-    </div>
-    <div id="budgetCards"></div>
-  </div>
-
   <!-- Stats -->
   <div class="stats">
     <div class="stat-card">
@@ -223,11 +189,6 @@
       <div class="stat-value green" id="totalCredit">0</div>
       <div class="stat-sub" id="avgSpend">avg 0/day</div>
     </div>
-  </div>
-
-  <!-- Budget button row -->
-  <div style="text-align:right; margin-bottom: 16px; margin-top: -8px;">
-    <span style="font-size:12px; color:var(--primary); cursor:pointer;" onclick="openBudgetModal()">Set monthly budgets</span>
   </div>
 
   <!-- Charts -->
@@ -250,6 +211,12 @@
 
   <!-- Filters -->
   <div class="filters" id="filters"></div>
+
+  <!-- Recurring Expenses (shown only when recurring items are detected) -->
+  <div class="recurring-section" id="recurringSection" style="display:none">
+    <div class="recurring-section-header">Recurring this month</div>
+    <div class="recurring-list" id="recurringList"></div>
+  </div>
 
   <!-- Transactions -->
   <div class="section-title">
@@ -287,18 +254,6 @@
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-save" onclick="saveExpense()">Save</button>
     </div>
-  </div>
-</div>
-
-<!-- Budget Settings Modal -->
-<div class="budget-modal-overlay" id="budgetModal" onclick="closeBudgetModalOnBg(event)">
-  <div class="budget-modal">
-    <div class="budget-modal-header">
-      <div class="budget-modal-title">Set Monthly Budgets</div>
-      <button class="budget-modal-close" onclick="closeBudgetModal()">x</button>
-    </div>
-    <div id="budgetInputRows"></div>
-    <button class="budget-save-btn" onclick="saveBudgets()">Save Budgets</button>
   </div>
 </div>
 
@@ -417,112 +372,91 @@ function parseSms(text) {
   };
 }
 
-// ---- BUDGET STORAGE ----
-const BUDGET_KEY = 'kharcha_budgets';
+// ---- RECURRING DETECTION ----
+// A transaction is recurring if the same merchant appears in at least 2 different
+// months with a similar amount (within 20%) and on a similar day of month (within 5 days).
+// We look across all months stored in localStorage to find patterns.
 
-function loadBudgets() {
-  try {
-    return JSON.parse(localStorage.getItem(BUDGET_KEY) || '{}');
-  } catch(e) { return {}; }
-}
-
-function saveBudgetsToStorage(budgets) {
-  localStorage.setItem(BUDGET_KEY, JSON.stringify(budgets));
-}
-
-// ---- BUDGET MODAL ----
-function openBudgetModal() {
-  const budgets = loadBudgets();
-  const rows = CATEGORIES.filter(c => c.id !== 'other');
-  document.getElementById('budgetInputRows').innerHTML = rows.map(c =>
-    '<div class="budget-row">' +
-    '<div class="budget-row-icon" style="background:' + c.color + '22">' + c.icon + '</div>' +
-    '<div class="budget-row-label">' + c.label + '</div>' +
-    '<input class="budget-input" type="number" inputmode="decimal" placeholder="No limit"' +
-    ' id="budget-inp-' + c.id + '" value="' + (budgets[c.id] || '') + '" />' +
-    '</div>'
-  ).join('');
-  document.getElementById('budgetModal').classList.add('open');
-}
-
-function closeBudgetModal() {
-  document.getElementById('budgetModal').classList.remove('open');
-}
-
-function closeBudgetModalOnBg(e) {
-  if (e.target === document.getElementById('budgetModal')) closeBudgetModal();
-}
-
-function saveBudgets() {
-  const budgets = {};
-  CATEGORIES.filter(c => c.id !== 'other').forEach(c => {
-    const val = parseFloat(document.getElementById('budget-inp-' + c.id).value);
-    if (val && val > 0) budgets[c.id] = val;
-  });
-  saveBudgetsToStorage(budgets);
-  closeBudgetModal();
-  render();
-  showToast('Budgets saved', 'success');
-}
-
-// ---- BUDGET RENDERING ----
-function getBudgetStatus(spent, limit) {
-  const pct = spent / limit;
-  if (pct >= 1) return 'over';
-  if (pct >= 0.8) return 'warn';
-  return 'ok';
-}
-
-function renderBudgets(debits) {
-  const budgets = loadBudgets();
-  const keys = Object.keys(budgets);
-  const section = document.getElementById('budgetSection');
-
-  if (keys.length === 0) {
-    section.style.display = 'none';
-    return;
+function loadAllExpenses() {
+  const all = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith('kharcha_')) continue;
+    // Skip non-month keys like kharcha_budgets
+    if (!/^kharcha_\d{4}_\d+$/.test(key)) continue;
+    try {
+      const entries = JSON.parse(localStorage.getItem(key) || '[]');
+      all.push(...entries);
+    } catch(e) { /* skip */ }
   }
-  section.style.display = 'block';
+  return all;
+}
 
-  // Tally spending per category for this month
-  const catSpend = {};
-  debits.forEach(e => { catSpend[e.category] = (catSpend[e.category] || 0) + e.amount; });
+function detectRecurring(currentExpenses) {
+  // Only look at debits - credits are not typically recurring in the same sense
+  const debits = currentExpenses.filter(e => e.type === 'debit');
+  if (debits.length === 0) return { recurringIds: new Set(), recurringItems: [] };
 
-  const cards = keys.map(catId => {
-    const cat = CAT_MAP[catId] || { label: catId, icon: '?', color: '#9090A8' };
-    const spent = catSpend[catId] || 0;
-    const limit = budgets[catId];
-    const pct = Math.min(spent / limit, 1);
-    const status = getBudgetStatus(spent, limit);
-    const statusLabel = status === 'over' ? 'Over budget' : (status === 'warn' ? 'Near limit' : 'On track');
-    const fillWidth = Math.round(pct * 100);
+  const allExpenses = loadAllExpenses().filter(e => e.type === 'debit');
 
-    return '<div class="budget-card ' + status + '">' +
-      '<div class="budget-card-top">' +
-      '<div class="budget-card-icon" style="background:' + cat.color + '22">' + cat.icon + '</div>' +
-      '<div class="budget-card-name">' + cat.label + '</div>' +
-      '<div class="budget-card-status ' + status + '">' + statusLabel + '</div>' +
-      '</div>' +
-      '<div class="budget-bar-track"><div class="budget-bar-fill ' + status + '" style="width:' + fillWidth + '%"></div></div>' +
-      '<div class="budget-card-amounts">' +
-      '<span class="spent">Rs.' + spent.toLocaleString('en-IN', {maximumFractionDigits: 0}) + ' spent</span>' +
-      '<span>of Rs.' + limit.toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</span>' +
-      '</div>' +
-      '</div>';
+  // Group all historical expenses by merchant (case-insensitive)
+  const byMerchant = {};
+  allExpenses.forEach(e => {
+    const key = (e.merchant || '').toLowerCase().trim();
+    if (!key || key === 'unknown') return;
+    if (!byMerchant[key]) byMerchant[key] = [];
+    byMerchant[key].push(e);
   });
 
-  document.getElementById('budgetCards').innerHTML = cards.join('');
+  const recurringIds = new Set();
+  const recurringItems = []; // one entry per detected recurring merchant for current month
 
-  // Alert user about over-budget categories for the current month only
-  const now = new Date();
-  const isCurrentMonth = currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth();
-  if (isCurrentMonth) {
-    const overCats = keys.filter(catId => (catSpend[catId] || 0) > budgets[catId]);
-    if (overCats.length > 0) {
-      const names = overCats.map(id => CAT_MAP[id]?.label || id).join(', ');
-      showToast('Over budget: ' + names, 'error');
+  debits.forEach(current => {
+    const key = (current.merchant || '').toLowerCase().trim();
+    if (!key || key === 'unknown') return;
+
+    const history = (byMerchant[key] || []).filter(e => e.id !== current.id);
+    if (history.length === 0) return;
+
+    const currentDay = new Date(current.date).getDate();
+    const currentMonth = new Date(current.date).getMonth();
+    const currentYear = new Date(current.date).getFullYear();
+
+    // Look for a match from a different month with similar amount and similar day
+    const match = history.find(e => {
+      const eDate = new Date(e.date);
+      // Must be a different month
+      if (eDate.getMonth() === currentMonth && eDate.getFullYear() === currentYear) return false;
+      // Similar day of month: within 5 days (wraps for end-of-month dates)
+      const dayDiff = Math.abs(eDate.getDate() - currentDay);
+      const dayClose = dayDiff <= 5 || dayDiff >= 25; // 25+ handles month boundary (e.g. 28 vs 2)
+      if (!dayClose) return false;
+      // Similar amount: within 20%
+      const amtDiff = Math.abs(e.amount - current.amount) / Math.max(current.amount, 1);
+      return amtDiff <= 0.20;
+    });
+
+    if (match) {
+      recurringIds.add(String(current.id));
+      // Add one card per unique merchant for the current month display
+      const alreadyAdded = recurringItems.some(r => r.merchant.toLowerCase().trim() === key);
+      if (!alreadyAdded) {
+        recurringItems.push({
+          ...current,
+          matchCount: history.filter(e => {
+            const eDate = new Date(e.date);
+            if (eDate.getMonth() === currentMonth && eDate.getFullYear() === currentYear) return false;
+            const dayDiff = Math.abs(eDate.getDate() - currentDay);
+            const dayClose = dayDiff <= 5 || dayDiff >= 25;
+            const amtDiff = Math.abs(e.amount - current.amount) / Math.max(current.amount, 1);
+            return dayClose && amtDiff <= 0.20;
+          }).length,
+        });
+      }
     }
-  }
+  });
+
+  return { recurringIds, recurringItems };
 }
 
 // ---- ANDROID BRIDGE ----
@@ -583,7 +517,7 @@ function render() {
 
   renderBarChart(debits, daysInMonth);
   renderDonut(debits);
-  renderBudgets(debits);
+  renderRecurring();
   renderFilters();
   renderTxList();
 }
@@ -648,6 +582,42 @@ function renderDonut(debits) {
   }).join('');
 }
 
+function renderRecurring() {
+  const { recurringIds, recurringItems } = detectRecurring(expenses);
+  const section = document.getElementById('recurringSection');
+
+  if (recurringItems.length === 0) {
+    section.style.display = 'none';
+    // Store empty set so renderTxList gets it
+    window._recurringIds = new Set();
+    return;
+  }
+
+  section.style.display = 'block';
+  window._recurringIds = recurringIds;
+
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('recurringList').innerHTML = recurringItems.map(item => {
+    const cat = CAT_MAP[item.category] || CAT_MAP.other;
+    const date = new Date(item.date);
+    const dayLabel = 'around the ' + date.getDate() + (
+      [,'st','nd','rd'][date.getDate()] || 'th'
+    ) + ' each month';
+    const timesLabel = (item.matchCount + 1) + ' months in a row';
+    return '<div class="recurring-item">' +
+      '<div class="recurring-icon" style="background:' + cat.color + '22">' + cat.icon + '</div>' +
+      '<div class="recurring-info">' +
+        '<div class="recurring-name">' + item.merchant + '</div>' +
+        '<div class="recurring-meta">' + cat.label + ' &middot; ' + dayLabel + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="recurring-amount">-Rs.' + Number(item.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div>' +
+        '<div class="recurring-amount-sub">' + timesLabel + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
 function renderFilters() {
   const cats = ['all', ...new Set(expenses.map(e => e.category))];
   const el = document.getElementById('filters');
@@ -677,7 +647,8 @@ function renderTxList() {
     const dateStr = date.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][date.getMonth()];
     const timeStr = date.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'});
     const badge = e.source === 'sms' ? ' (SMS)' : '';
-    return '<div class="tx-item"><div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + (e.merchant || 'Unknown') + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + e.bank : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div><button class="tx-delete" onclick="deleteExpense(\'' + e.id + '\')">x</button></div>';
+    const recurBadge = (window._recurringIds && window._recurringIds.has(String(e.id))) ? '<span class="recurring-badge">Recurring</span>' : '';
+    return '<div class="tx-item"><div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + (e.merchant || 'Unknown') + recurBadge + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + e.bank : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div><button class="tx-delete" onclick="deleteExpense(\'' + e.id + '\')">x</button></div>';
   }).join('');
 }
 
@@ -749,6 +720,7 @@ function showToast(msg, type) {
 
 // ---- INIT ----
 load();
+window._recurringIds = new Set();
 // Show SMS banner on non-Android browsers
 if (!/Android/i.test(navigator.userAgent)) {
   document.getElementById('smsBanner').style.display = 'block';

@@ -1130,8 +1130,11 @@ function exportBackup() {
       if (Array.isArray(list) && list.length > 0) data[key] = list;
     } catch(e) { /* skip a month that cannot be read */ }
   }
-  if (Object.keys(data).length === 0) { showToast('Nothing to back up yet', 'error'); return; }
+  const budgets = loadBudgets();
+  const hasBudgets = Object.keys(budgets).length > 0;
+  if (Object.keys(data).length === 0 && !hasBudgets) { showToast('Nothing to back up yet', 'error'); return; }
   const backup = { app: 'kharcha', version: 1, exportedAt: new Date().toISOString(), data };
+  if (hasBudgets) backup.budgets = budgets;
   downloadFile('kharcha-backup-' + toDateInputValue(new Date()) + '.json', JSON.stringify(backup, null, 2), 'application/json');
   showToast('Backup downloaded', 'success');
 }
@@ -1189,8 +1192,31 @@ function mergeRestored(items) {
   return added;
 }
 
-// Reads a backup file chosen by the person and adds its transactions.
-// Nothing that is already saved is changed or removed.
+// Adds restored budgets for categories that have no budget yet.
+// A budget that is already saved is never replaced. Returns how many were added.
+function mergeRestoredBudgets(incoming) {
+  const current = loadBudgets();
+  let added = 0;
+  Object.keys(incoming).forEach(id => {
+    if (current[id]) return;
+    current[id] = incoming[id];
+    added++;
+  });
+  if (added > 0) saveBudgets(current);
+  return added;
+}
+
+// Builds the message shown after a restore.
+function restoreMessage(transactions, budgets) {
+  if (transactions === 0 && budgets === 0) return 'Nothing new to restore';
+  const parts = [];
+  if (transactions > 0) parts.push(transactions + ' transactions');
+  if (budgets > 0) parts.push(budgets + (budgets === 1 ? ' budget' : ' budgets'));
+  return 'Restored ' + parts.join(' and ');
+}
+
+// Reads a backup file chosen by the person and adds its transactions and
+// budgets. Nothing that is already saved is changed or removed.
 function restoreBackup(event) {
   const input = event.target;
   const file = input.files && input.files[0];
@@ -1216,8 +1242,9 @@ function restoreBackup(event) {
         });
       });
       const added = mergeRestored(items);
+      const budgetsAdded = mergeRestoredBudgets(cleanBudgets(backup.budgets));
       render();
-      showToast(added === 0 ? 'Nothing new to restore' : 'Restored ' + added + ' transactions', 'success');
+      showToast(restoreMessage(added, budgetsAdded), 'success');
     } catch(err) {
       showToast('That is not a Kharcha backup file', 'error');
     }

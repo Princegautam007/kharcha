@@ -162,10 +162,14 @@ class MainActivity : AppCompatActivity() {
     fun onNewSms(body: String, address: String) {
         if (!isBankSms(address, body)) return
         runOnUiThread {
-            val escaped = body.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
-            webView.evaluateJavascript(
-                "window.onSmsReceived('$escaped')", null
-            )
+            // JSONObject.quote turns the text into a safe JavaScript string.
+            // It handles quotes, new lines, carriage returns and line separators.
+            // If the page has not finished loading yet, nothing happens here.
+            // The SMS is picked up by the history import instead, and the web
+            // app skips it if it was already saved.
+            val js = "if (typeof window.onSmsReceived === 'function') " +
+                "window.onSmsReceived(${JSONObject.quote(body)})"
+            webView.evaluateJavascript(js, null)
         }
     }
 

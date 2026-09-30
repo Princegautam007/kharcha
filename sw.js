@@ -1,7 +1,7 @@
 // Kharcha service worker.
 // Saves the app files on the first visit so the app opens without internet.
 // Change CACHE_VERSION whenever the list of files below changes.
-const CACHE_VERSION = 'kharcha-v1';
+const CACHE_VERSION = 'kharcha-v2';
 const APP_FILES = [
   './',
   'index.html',

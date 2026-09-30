@@ -19,10 +19,14 @@ Your bank sends you an SMS every time money moves. Kharcha intercepts those SMS 
 - Monthly bar chart showing your daily spending
 - Category donut chart so you know where money is going
 - Month-by-month navigation
-- Filter transactions by category
+- Filter transactions by category, search by merchant/amount/date, and sort by newest, oldest or amount
+- Tap any transaction for full details, edit it, or export just that one row as CSV
+- Select several transactions to delete or recategorise them in one step
+- Monthly budget limits per category, with a warning colour as you get close
 - Recurring payment detection (rent, subscriptions and bills are flagged and listed together)
 - Manual add option when you pay cash, with a date you can choose
 - Never logs the same SMS twice, even if it arrives live and again in the SMS history
+- Backup and restore everything as a JSON file
 - Install it as an app and use it offline
 - Data stays on your device
 

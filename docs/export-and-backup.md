@@ -8,18 +8,7 @@ of the page under "Your data", let you take a copy.
 Scroll to the very bottom of the main page, past the transaction list. You will
 see the heading **Your data** with three buttons side by side:
 
-```
-┌───────────────────────────────────────────────┐
-│  Transactions                                │
-│  ───────────────────────────────────────────  │
-│  ... list of your expenses ...               │
-│                                              │
-│  YOUR DATA                                   │
-│  ┌──────────────┬──────────┬──────────┐       │
-│  │ Download CSV │ Backup   │ Restore  │       │
-│  └──────────────┴──────────┴──────────┘       │
-└───────────────────────────────────────────────┘
-```
+![The Your data section with Download CSV, Backup and Restore buttons](images/export-buttons.png)
 
 On a phone the three buttons sit in one row and wrap to a new line if the
 screen is narrow.

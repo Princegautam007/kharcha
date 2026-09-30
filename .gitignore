@@ -12,6 +12,9 @@ memory/
 .DS_Store
 Thumbs.db
 
+# IDE
+.idea/
+
 # Node (if added later)
 node_modules/
 dist/

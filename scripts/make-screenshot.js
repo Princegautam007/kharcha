@@ -55,6 +55,9 @@ const scriptStart = html.lastIndexOf('<script>', at);
 if (scriptStart === -1) throw new Error('could not find the opening script tag');
 
 const seeded = html.slice(0, scriptStart) + seedScript + html.slice(scriptStart);
-const trimmed = seeded.replace('</body>', trimScript + '</body>');
-fs.writeFileSync(path.join(root, '_shot.html'), trimmed, 'utf8');
-console.log('wrote _shot.html with', seed.length, 'sample expenses under', key);
+// --full keeps every section, useful when checking the whole page layout.
+const full = process.argv.includes('--full');
+const out = full ? seeded : seeded.replace('</body>', trimScript + '</body>');
+const name = full ? '_shot-full.html' : '_shot.html';
+fs.writeFileSync(path.join(root, name), out, 'utf8');
+console.log('wrote', name, 'with', seed.length, 'sample expenses under', key);

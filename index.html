@@ -96,6 +96,17 @@
     .btn-cancel { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); border-radius: 10px; padding: 13px; font-size: 15px; cursor: pointer; }
     .btn-save { flex: 2; background: var(--primary); border: none; color: #fff; border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; }
 
+    /* EXPENSE DETAIL */
+    .detail-amount { font-size: 32px; font-weight: 700; text-align: center; margin: 4px 0 2px; color: var(--red); }
+    .detail-amount.credit { color: var(--green); }
+    .detail-merchant { text-align: center; color: var(--text2); font-size: 14px; margin-bottom: 18px; }
+    .detail-rows { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 2px 14px; }
+    .detail-row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; font-size: 14px; border-bottom: 1px solid var(--border); }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row .k { color: var(--text2); }
+    .detail-row .v { font-weight: 600; text-align: right; }
+    .btn-danger { flex: 1; background: transparent; border: 1px solid var(--red); color: var(--red); border-radius: 10px; padding: 13px; font-size: 15px; cursor: pointer; }
+
     /* TRANSACTIONS */
     .section-title { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
     .filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; scrollbar-width: none; }
@@ -111,6 +122,8 @@
     .search-box .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text2); pointer-events: none; }
 
     .tx-list { display: flex; flex-direction: column; gap: 8px; }
+    .tx-item { cursor: pointer; }
+    .tx-item:hover { border-color: var(--primary); }
     .tx-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; align-items: center; gap: 12px; }
     .tx-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
     .tx-info { flex: 1; min-width: 0; }
@@ -337,6 +350,27 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeBudgetModal()">Cancel</button>
       <button class="btn-save" onclick="saveBudgetsFromModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Detail Modal -->
+<div class="modal-overlay" id="detailModal" onclick="closeDetailModalOnBg(event)">
+  <div class="modal">
+    <div class="modal-title">Transaction Details</div>
+    <div class="detail-amount" id="detail-amount"></div>
+    <div class="detail-merchant" id="detail-merchant"></div>
+    <div class="detail-rows">
+      <div class="detail-row"><span class="k">Category</span><span class="v" id="detail-category"></span></div>
+      <div class="detail-row"><span class="k">Type</span><span class="v" id="detail-type"></span></div>
+      <div class="detail-row"><span class="k">Date</span><span class="v" id="detail-date"></span></div>
+      <div class="detail-row" id="detail-bank-row" style="display:none"><span class="k">Bank</span><span class="v" id="detail-bank"></span></div>
+      <div class="detail-row"><span class="k">Source</span><span class="v" id="detail-source"></span></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDetailModal()">Close</button>
+      <button class="btn-danger" onclick="deleteFromDetail()">Delete</button>
+      <button class="btn-save" onclick="editFromDetail()">Edit</button>
     </div>
   </div>
 </div>
@@ -1062,7 +1096,7 @@ function renderTxList() {
     const timeStr = date.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'});
     const badge = e.source === 'sms' ? ' (SMS)' : '';
     const recurBadge = (window._recurringIds && window._recurringIds.has(String(e.id))) ? '<span class="recurring-badge">Recurring</span>' : '';
-    return '<div class="tx-item"><div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + escapeHtml(e.merchant || 'Unknown') + recurBadge + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + escapeHtml(e.bank) : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div><button class="tx-delete" onclick="deleteExpense(\'' + e.id + '\')">x</button><button class="tx-edit" onclick="openEditModal(\'' + e.id + '\')">Edit</button></div>';
+    return '<div class="tx-item" onclick="showExpenseDetail(\'' + e.id + '\')"><div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + escapeHtml(e.merchant || 'Unknown') + recurBadge + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + escapeHtml(e.bank) : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div><button class="tx-delete" onclick="event.stopPropagation();deleteExpense(\'' + e.id + '\')">x</button><button class="tx-edit" onclick="event.stopPropagation();openEditModal(\'' + e.id + '\')">Edit</button></div>';
   }).join('');
 }
 
@@ -1117,6 +1151,58 @@ function closeModal() {
 
 function closeModalOnBg(e) {
   if (e.target === document.getElementById('modal')) closeModal();
+}
+
+// ---- EXPENSE DETAIL ----
+// Shows every field of one transaction in its own modal. Clicking a row
+// in the list opens it; Edit and Delete inside it reuse the same id.
+let detailExpenseId = null;
+
+function showExpenseDetail(id) {
+  const e = expenses.find(x => String(x.id) === String(id));
+  if (!e) return false;
+  detailExpenseId = e.id;
+
+  const cat = CAT_MAP[e.category] || CAT_MAP.other;
+  const credit = e.type === 'credit';
+  const amountEl = document.getElementById('detail-amount');
+  amountEl.textContent = (credit ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  amountEl.className = 'detail-amount' + (credit ? ' credit' : '');
+  document.getElementById('detail-merchant').textContent = e.merchant || 'Unknown';
+  document.getElementById('detail-category').textContent = cat.icon + ' ' + cat.label;
+  document.getElementById('detail-type').textContent = credit ? 'Credit (Income)' : 'Debit (Expense)';
+  const d = new Date(e.date);
+  document.getElementById('detail-date').textContent = isNaN(d.getTime())
+    ? String(e.date)
+    : d.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const bankRow = document.getElementById('detail-bank-row');
+  bankRow.style.display = e.bank ? '' : 'none';
+  document.getElementById('detail-bank').textContent = e.bank || '';
+  document.getElementById('detail-source').textContent = e.source === 'sms' ? 'From SMS' : 'Manual entry';
+
+  document.getElementById('detailModal').classList.add('open');
+  return true;
+}
+
+function closeDetailModal() {
+  detailExpenseId = null;
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+function closeDetailModalOnBg(e) {
+  if (e.target === document.getElementById('detailModal')) closeDetailModal();
+}
+
+function editFromDetail() {
+  const id = detailExpenseId;
+  closeDetailModal();
+  if (id != null) openEditModal(id);
+}
+
+function deleteFromDetail() {
+  const id = detailExpenseId;
+  closeDetailModal();
+  if (id != null) deleteExpense(id);
 }
 
 // Reads the chosen date. Returns null if it is missing or outside the month

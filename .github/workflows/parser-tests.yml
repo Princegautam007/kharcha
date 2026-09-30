@@ -1,10 +1,12 @@
-name: Parser tests
+name: Tests
 
 on:
   pull_request:
+  push:
+    branches: [main]
 
 jobs:
-  parser-tests:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -15,5 +17,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Run parser tests
-        run: node --test tests/parser.test.js
+      - name: Run all test suites
+        # Bash expands the glob so every tests/*.test.js file runs: the
+        # node:test suites and the plain mini-test scripts alike. A failure
+        # in any suite fails the build.
+        run: node --test tests/*.test.js

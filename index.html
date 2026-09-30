@@ -113,6 +113,8 @@
     .tx-amount.credit { color: var(--green); }
     .tx-delete { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 16px; padding: 4px; opacity: 0.5; }
     .tx-delete:hover { opacity: 1; color: var(--red); }
+    .tx-edit { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 14px; padding: 4px; opacity: 0.5; text-decoration: underline; }
+    .tx-edit:hover { opacity: 1; color: var(--primary); }
 
     /* RECURRING */
     .recurring-section { margin-bottom: 20px; }
@@ -349,6 +351,7 @@ CATEGORIES.forEach(c => CAT_MAP[c.id] = c);
 let currentDate = new Date();
 let selectedCat = 'all';
 let selectedModalCat = 'other';
+let editingExpenseId = null;
 let expenses = [];
 
 // ---- STORAGE ----
@@ -362,6 +365,28 @@ function load() {
 }
 function save() {
   localStorage.setItem(storageKey(currentDate), JSON.stringify(expenses));
+}
+
+// ---- EDIT EXPENSE ----
+function openEditModal(expense) {
+  editingExpenseId = expense.id;
+  selectedModalCat = expense.category || 'other';
+  buildCatGrid();
+  document.getElementById('inp-amount').value = expense.amount;
+  document.getElementById('inp-desc').value = expense.merchant || '';
+  document.getElementById('inp-type').value = expense.type || 'debit';
+
+  // Set date to the expense's date
+  const when = new Date(expense.date);
+  const dateInput = document.getElementById('inp-date');
+  dateInput.min = toDateInputValue(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+  const last = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+  dateInput.max = toDateInputValue(last);
+  dateInput.value = toDateInputValue(when);
+
+  document.getElementById('modal').querySelector('.modal-title').textContent = 'Edit Expense';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('inp-amount').focus(), 100);
 }
 
 // ---- SAFE TEXT ----
@@ -998,7 +1023,8 @@ function renderTxList() {
     const timeStr = date.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'});
     const badge = e.source === 'sms' ? ' (SMS)' : '';
     const recurBadge = (window._recurringIds && window._recurringIds.has(String(e.id))) ? '<span class="recurring-badge">Recurring</span>' : '';
-    return '<div class="tx-item"><div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + escapeHtml(e.merchant || 'Unknown') + recurBadge + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + escapeHtml(e.bank) : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div><button class="tx-delete" onclick="deleteExpense(\'' + e.id + '\')">x</button></div>';
+    return '<div class="tx-item"><div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + escapeHtml(e.merchant || 'Unknown') + recurBadge + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + escapeHtml(e.bank) : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div>      <button class="tx-delete" onclick="deleteExpense(\'' + e.id + '\')">x</button>
+      <button class="tx-edit" onclick="openEditModal(${JSON.stringify(e).replace(/'/g, "\\'")})">Edit</button></div>';
   }).join('');
 }
 
@@ -1022,6 +1048,11 @@ function toDateInputValue(d) {
 }
 
 function openModal() {
+  editingExpenseId = null;
+  document.getElementById('modal').querySelector('.modal-title').textContent = 'Add Expense';
+  selectedModalCat = 'other';
+  buildCatGrid();
+function openModal() {
   selectedModalCat = 'other';
   buildCatGrid();
   document.getElementById('inp-amount').value = '';
@@ -1044,6 +1075,8 @@ function openModal() {
 }
 
 function closeModal() {
+  editingExpenseId = null;
+  document.getElementById('modal').querySelector('.modal-title').textContent = 'Add Expense';
   document.getElementById('modal').classList.remove('open');
 }
 
@@ -1071,8 +1104,10 @@ function saveExpense() {
   if (!desc) { showToast('Enter a description', 'error'); return; }
   const when = readChosenDate();
   if (!when) { showToast('Pick a date in ' + (currentDate.getMonth() + 1) + '/' + currentDate.getFullYear(), 'error'); return; }
+
+  const now = new Date();
   const expense = {
-    id: Date.now() + Math.random(),
+    id: editingExpenseId || (Date.now() + Math.random()),
     amount,
     type,
     merchant: desc,
@@ -1080,12 +1115,24 @@ function saveExpense() {
     date: when.toISOString(),
     source: 'manual',
   };
-  expenses.unshift(expense);
+
+  if (editingExpenseId) {
+    // Update existing expense
+    const idx = expenses.findIndex(e => String(e.id) === String(editingExpenseId));
+    if (idx >= 0) {
+      expenses[idx] = expense;
+    }
+    editingExpenseId = null;
+    showToast('Updated!', 'success');
+  } else {
+    // Add new expense
+    expenses.unshift(expense);
+    showToast('Saved!', 'success');
+  }
   expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
   save();
   closeModal();
   render();
-  showToast('Saved!', 'success');
 }
 
 function deleteExpense(id) {

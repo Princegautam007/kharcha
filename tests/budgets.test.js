@@ -255,7 +255,7 @@ test('restore of an older backup without budgets still works', () => {
   const entry = { id: 7, type: 'debit', amount: 50, category: 'food', merchant: 'Cafe', date: '2026-09-10T10:00:00.000Z', source: 'manual' };
   const app = loadApp();
   restore(app, { app: 'kharcha', version: 1, data: { kharcha_2026_9: [entry] } });
-  assert.strictEqual(app.elements.toast.textContent, 'Restored 1 transactions');
+  assert.strictEqual(app.elements.toast.textContent, 'Restored 1 transaction');
   assert.deepStrictEqual(app.run('loadBudgets()'), {});
 });
 

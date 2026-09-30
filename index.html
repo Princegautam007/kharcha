@@ -369,6 +369,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeDetailModal()">Close</button>
+      <button class="btn-cancel" onclick="exportSingleExpense()">Download</button>
       <button class="btn-danger" onclick="deleteFromDetail()">Delete</button>
       <button class="btn-save" onclick="editFromDetail()">Edit</button>
     </div>
@@ -1203,6 +1204,17 @@ function deleteFromDetail() {
   const id = detailExpenseId;
   closeDetailModal();
   if (id != null) deleteExpense(id);
+}
+
+// Downloads just the one transaction being viewed, as a single-row CSV file
+// with the same columns as the whole-month export.
+function exportSingleExpense() {
+  const e = expenses.find(x => String(x.id) === String(detailExpenseId));
+  if (!e) { showToast('Nothing to export', 'error'); return; }
+  const d = new Date(e.date);
+  const stamp = isNaN(d.getTime()) ? '' : '-' + toDateInputValue(d);
+  downloadFile('kharcha-transaction' + stamp + '.csv', buildCsv([e]), 'text/csv');
+  showToast('Downloaded 1 transaction', 'success');
 }
 
 // Reads the chosen date. Returns null if it is missing or outside the month

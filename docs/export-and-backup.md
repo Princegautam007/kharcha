@@ -31,6 +31,11 @@ Saves the month you are looking at as a spreadsheet file, for example
 time, type, amount, merchant, category, bank and where it came from (SMS or
 manual).
 
+To export **just one transaction**, tap the transaction to open its details,
+then tap **Download** in the detail window. It saves a file such as
+`kharcha-transaction-2026-09-12.csv` with the same columns, header plus that one
+row.
+
 ## Backup
 
 Saves all your months in one file, for example `kharcha-backup-2026-09-30.json`.

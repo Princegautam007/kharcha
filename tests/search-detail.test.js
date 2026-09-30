@@ -166,4 +166,30 @@ test('deleteFromDetail with no selection does nothing', () => {
   assert.strictEqual(app.run('expenses.length'), 3);
 });
 
+console.log('\nexportSingleExpense');
+
+test('downloads the viewed transaction as a one-row CSV', () => {
+  const app = seededApp();
+  app.run('window.__download = null; downloadFile = (name, text, mime) => { window.__download = { name, text, mime }; };');
+  app.run('showExpenseDetail(2)');
+  app.run('exportSingleExpense()');
+  const dl = app.run('window.__download');
+  assert.ok(dl, 'downloadFile was called');
+  assert.ok(dl.name.startsWith('kharcha-transaction') && dl.name.endsWith('.csv'), 'csv filename, got: ' + dl.name);
+  assert.strictEqual(dl.mime, 'text/csv');
+  // buildCsv adds a UTF-8 BOM (U+FEFF) for Excel; strip it before checking.
+  const text = dl.text.charCodeAt(0) === 0xFEFF ? dl.text.slice(1) : dl.text;
+  assert.ok(text.startsWith('Date,Time,Type,Amount,Merchant,Category,Bank,Source'), 'same header as month export');
+  assert.ok(text.includes('Uber Ride'), 'contains the merchant');
+  assert.ok(text.includes('HDFC'), 'contains the bank');
+  assert.strictEqual(text.trim().split('\n').length, 2, 'header plus one row');
+  assert.strictEqual(app.run("document.getElementById('toast').textContent"), 'Downloaded 1 transaction');
+});
+
+test('with no detail open it reports nothing to export', () => {
+  const app = seededApp();
+  app.run('exportSingleExpense()');
+  assert.strictEqual(app.run("document.getElementById('toast').textContent"), 'Nothing to export');
+});
+
 finish();

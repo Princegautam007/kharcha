@@ -124,6 +124,14 @@
     .tx-list { display: flex; flex-direction: column; gap: 8px; }
     .tx-tools { display: flex; align-items: center; gap: 10px; }
     .tx-tools select { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 12px; padding: 4px 6px; outline: none; cursor: pointer; }
+    .tool-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 12px; padding: 4px 10px; cursor: pointer; }
+    .tool-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .bulk-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--primary); border-radius: var(--radius); font-size: 13px; color: var(--text2); }
+    .bulk-bar #bulkCount { flex: 1; font-weight: 600; color: var(--text); }
+    .btn-danger-sm { background: var(--red); border: none; color: #fff; border-radius: 8px; font-size: 12px; padding: 5px 12px; cursor: pointer; }
+    .tx-check { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--primary); font-weight: 700; }
+    .tx-item.selected { border-color: var(--primary); }
+    .tx-item.selected .tx-check { border-color: var(--primary); }
     .tx-item { cursor: pointer; }
     .tx-item:hover { border-color: var(--primary); }
     .tx-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; align-items: center; gap: 12px; }
@@ -301,8 +309,15 @@
         <option value="high">Amount: high to low</option>
         <option value="low">Amount: low to high</option>
       </select>
+      <button id="selBtn" class="tool-btn" onclick="toggleSelectMode()">Select</button>
       <span id="filteredCount"></span>
     </span>
+  </div>
+  <div class="bulk-bar" id="bulkBar" style="display:none">
+    <span id="bulkCount">0 selected</span>
+    <button class="tool-btn" onclick="selectAllVisible()">All</button>
+    <button class="btn-danger-sm" onclick="deleteSelected()">Delete</button>
+    <button class="tool-btn" onclick="toggleSelectMode()">Cancel</button>
   </div>
   <div class="tx-list" id="txList"></div>
 
@@ -410,6 +425,8 @@ let currentDate = new Date();
 let selectedCat = 'all';
 let searchQuery = '';
 let sortOrder = 'newest';
+let selectMode = false;
+let selectedIds = new Set();
 let selectedModalCat = 'other';
 let editingExpenseId = null;
 let expenses = [];
@@ -795,6 +812,7 @@ window.onSmsHistoryReceived = function(smsArray) {
 function changeMonth(dir) {
   currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + dir, 1);
   selectedCat = 'all';
+  if (selectMode) setSelectMode(false);
   load();
   render();
 }
@@ -1106,15 +1124,64 @@ function sortExpenses(list) {
   return copy;
 }
 
-function renderTxList() {
+// The list as the user currently sees it: category filter, search and sort.
+function visibleExpenses() {
   const q = searchQuery.trim();
-  const filtered = sortExpenses(expenses.filter(e =>
+  return sortExpenses(expenses.filter(e =>
     (selectedCat === 'all' || e.category === selectedCat) && matchesSearch(e, q)
   ));
+}
+
+// ---- BULK SELECT ----
+// Select mode turns each row into a checkbox so several transactions can be
+// deleted at once. Clicking Select toggles it; Cancel and Done both leave it.
+function setSelectMode(on) {
+  selectMode = on;
+  selectedIds = new Set();
+  document.getElementById('selBtn').textContent = on ? 'Done' : 'Select';
+  document.getElementById('bulkBar').style.display = on ? 'flex' : 'none';
+  updateBulkCount();
+}
+
+function toggleSelectMode() {
+  setSelectMode(!selectMode);
+  renderTxList();
+}
+
+function updateBulkCount() {
+  document.getElementById('bulkCount').textContent = selectedIds.size + ' selected';
+}
+
+function toggleSelect(id) {
+  const key = String(id);
+  if (selectedIds.has(key)) selectedIds.delete(key);
+  else selectedIds.add(key);
+  updateBulkCount();
+  renderTxList();
+}
+
+function selectAllVisible() {
+  visibleExpenses().forEach(e => selectedIds.add(String(e.id)));
+  updateBulkCount();
+  renderTxList();
+}
+
+function deleteSelected() {
+  const n = selectedIds.size;
+  if (n === 0) return;
+  expenses = expenses.filter(e => !selectedIds.has(String(e.id)));
+  save();
+  setSelectMode(false);
+  render();
+  showToast('Deleted ' + n + ' transaction' + (n === 1 ? '' : 's'), 'success');
+}
+
+function renderTxList() {
+  const filtered = visibleExpenses();
   document.getElementById('filteredCount').textContent = filtered.length + ' items';
   const el = document.getElementById('txList');
   if (filtered.length === 0) {
-    const msg = (q || selectedCat !== 'all') ? 'No transactions match' : 'No transactions yet';
+    const msg = (searchQuery.trim() || selectedCat !== 'all') ? 'No transactions match' : 'No transactions yet';
     el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">' + msg + '</div></div>';
     return;
   }
@@ -1125,7 +1192,13 @@ function renderTxList() {
     const timeStr = date.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'});
     const badge = e.source === 'sms' ? ' (SMS)' : '';
     const recurBadge = (window._recurringIds && window._recurringIds.has(String(e.id))) ? '<span class="recurring-badge">Recurring</span>' : '';
-    return '<div class="tx-item" onclick="showExpenseDetail(\'' + e.id + '\')"><div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + escapeHtml(e.merchant || 'Unknown') + recurBadge + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + escapeHtml(e.bank) : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div><button class="tx-delete" onclick="event.stopPropagation();deleteExpense(\'' + e.id + '\')">x</button><button class="tx-edit" onclick="event.stopPropagation();openEditModal(\'' + e.id + '\')">Edit</button></div>';
+    const rowClick = selectMode ? 'toggleSelect' : 'showExpenseDetail';
+    const isSelected = selectedIds.has(String(e.id));
+    const check = selectMode ? '<span class="tx-check">' + (isSelected ? '✓' : '') + '</span>' : '';
+    const tools = selectMode ? '' :
+      '<button class="tx-delete" onclick="event.stopPropagation();deleteExpense(\'' + e.id + '\')">x</button>' +
+      '<button class="tx-edit" onclick="event.stopPropagation();openEditModal(\'' + e.id + '\')">Edit</button>';
+    return '<div class="tx-item' + (selectMode && isSelected ? ' selected' : '') + '" onclick="' + rowClick + '(\'' + e.id + '\')">' + check + '<div class="tx-icon" style="background:' + cat.color + '22">' + cat.icon + '</div><div class="tx-info"><div class="tx-name">' + escapeHtml(e.merchant || 'Unknown') + recurBadge + '</div><div class="tx-meta">' + cat.label + badge + ' &middot; ' + dateStr + ' ' + timeStr + (e.bank ? ' &middot; ' + escapeHtml(e.bank) : '') + '</div></div><div class="tx-amount' + (e.type === 'credit' ? ' credit' : '') + '">' + (e.type === 'credit' ? '+' : '-') + 'Rs.' + Number(e.amount).toLocaleString('en-IN', {maximumFractionDigits: 0}) + '</div>' + tools + '</div>';
   }).join('');
 }
 

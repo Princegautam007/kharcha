@@ -3,6 +3,23 @@
 You can put Kharcha on your home screen and use it like a normal app. It also
 opens without internet after the first visit.
 
+## Where the app comes from
+
+Kharcha is published with **GitHub Pages**. The workflow file
+`.github/workflows/deploy.yml` runs automatically on every push to the `main`
+branch and republishes the site at
+https://princegautam007.github.io/kharcha — there is no manual release step.
+
+What that means for you:
+
+- Updates appear on their own. After a new version is pushed to `main`, the
+  link above serves the new version within a minute or two.
+- The installed app picks the update up on the next visit **with internet**
+  (see "Good to know" below). You never need to reinstall.
+- If you host your own fork, enable Pages in the repository settings
+  (Settings → Pages → Source: GitHub Actions) and the same workflow publishes
+  your copy.
+
 ## On Android (Chrome)
 
 1. Open https://princegautam007.github.io/kharcha

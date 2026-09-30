@@ -122,6 +122,8 @@
     .search-box .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text2); pointer-events: none; }
 
     .tx-list { display: flex; flex-direction: column; gap: 8px; }
+    .tx-tools { display: flex; align-items: center; gap: 10px; }
+    .tx-tools select { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 12px; padding: 4px 6px; outline: none; cursor: pointer; }
     .tx-item { cursor: pointer; }
     .tx-item:hover { border-color: var(--primary); }
     .tx-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; align-items: center; gap: 12px; }
@@ -292,7 +294,15 @@
   <!-- Transactions -->
   <div class="section-title">
     <span>Transactions</span>
-    <span id="filteredCount"></span>
+    <span class="tx-tools">
+      <select id="sortSel" onchange="setSort(this.value)" aria-label="Sort transactions">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="high">Amount: high to low</option>
+        <option value="low">Amount: low to high</option>
+      </select>
+      <span id="filteredCount"></span>
+    </span>
   </div>
   <div class="tx-list" id="txList"></div>
 
@@ -399,6 +409,7 @@ CATEGORIES.forEach(c => CAT_MAP[c.id] = c);
 let currentDate = new Date();
 let selectedCat = 'all';
 let searchQuery = '';
+let sortOrder = 'newest';
 let selectedModalCat = 'other';
 let editingExpenseId = null;
 let expenses = [];
@@ -1078,11 +1089,28 @@ function matchesSearch(e, q) {
   return false;
 }
 
+const SORT_MODES = ['newest', 'oldest', 'high', 'low'];
+
+// Changes the order of the transaction list without touching the data.
+function setSort(mode) {
+  sortOrder = SORT_MODES.indexOf(mode) !== -1 ? mode : 'newest';
+  renderTxList();
+}
+
+function sortExpenses(list) {
+  const copy = list.slice();
+  if (sortOrder === 'oldest') copy.sort((a, b) => new Date(a.date) - new Date(b.date));
+  else if (sortOrder === 'high') copy.sort((a, b) => b.amount - a.amount);
+  else if (sortOrder === 'low') copy.sort((a, b) => a.amount - b.amount);
+  else copy.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return copy;
+}
+
 function renderTxList() {
   const q = searchQuery.trim();
-  const filtered = expenses.filter(e =>
+  const filtered = sortExpenses(expenses.filter(e =>
     (selectedCat === 'all' || e.category === selectedCat) && matchesSearch(e, q)
-  );
+  ));
   document.getElementById('filteredCount').textContent = filtered.length + ' items';
   const el = document.getElementById('txList');
   if (filtered.length === 0) {

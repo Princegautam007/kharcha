@@ -192,4 +192,52 @@ test('with no detail open it reports nothing to export', () => {
   assert.strictEqual(app.run("document.getElementById('toast').textContent"), 'Nothing to export');
 });
 
+console.log('\nsorting');
+
+function order(app) {
+  return listHtml(app).match(/Zomato Order|Uber Ride|Refund/g) || [];
+}
+
+test('defaults to newest first', () => {
+  const app = seededApp();
+  assert.deepStrictEqual(order(app), ['Refund', 'Uber Ride', 'Zomato Order']);
+});
+
+test('oldest first reverses the date order', () => {
+  const app = seededApp();
+  app.run('setSort("oldest")');
+  assert.deepStrictEqual(order(app), ['Zomato Order', 'Uber Ride', 'Refund']);
+});
+
+test('amount high to low', () => {
+  const app = seededApp();
+  app.run('setSort("high")');
+  assert.deepStrictEqual(order(app), ['Refund', 'Uber Ride', 'Zomato Order']);
+});
+
+test('amount low to high', () => {
+  const app = seededApp();
+  app.run('setSort("low")');
+  assert.deepStrictEqual(order(app), ['Zomato Order', 'Uber Ride', 'Refund']);
+});
+
+test('an unknown mode falls back to newest first', () => {
+  const app = seededApp();
+  app.run('setSort("sideways")');
+  assert.deepStrictEqual(order(app), ['Refund', 'Uber Ride', 'Zomato Order']);
+});
+
+test('sorting applies inside a search result', () => {
+  const app = seededApp();
+  app.run('searchExpenses("e")'); // matches all three
+  app.run('setSort("low")');
+  assert.deepStrictEqual(order(app), ['Zomato Order', 'Uber Ride', 'Refund']);
+  assert.strictEqual(count(app), '3 items');
+});
+
+test('the sort control is wired to setSort in the markup', () => {
+  const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+  assert.ok(/<select[^>]*id="sortSel"[^>]*onchange="setSort\(this\.value\)"/.test(html), 'select calls setSort');
+});
+
 finish();

@@ -14,19 +14,44 @@ Open Android Studio. Choose "Open" and select the `android/` folder inside the k
 
 ### 2. Add the web app as an asset
 
-Copy `index.html` from the root of the repo into:
+The Android app is a shell around the web UI. It needs its own copy of
+`index.html` inside the project, because the WebView loads it from the app's
+assets folder — not from the repo root.
+
+**From a terminal (easiest):** run this from the repository root, in the
+project folder:
+
+```sh
+# macOS / Linux
+mkdir -p android/app/src/main/assets
+cp index.html android/app/src/main/assets/
+```
+
+```powershell
+# Windows PowerShell
+New-Item -ItemType Directory -Force android\app\src\main\assets
+Copy-Item index.html android\app\src\main\assets\
+```
+
+**From Android Studio:** in the Project pane, switch the dropdown from
+"Android" to "Project" view, then right-click
+`app/src/main` → New → Directory → name it `assets`. Right-click the new
+`assets` folder → Paste, and copy `index.html` from the repo root into it.
+
+You end up with:
 
 ```
-android/app/src/main/assets/index.html
+kharcha/
+├── index.html                              <- the source of truth
+└── android/app/src/main/
+    └── assets/
+        └── index.html                      <- the copy the app loads
 ```
 
-Create the `assets` folder if it does not exist:
-
-```
-android/app/src/main/assets/
-```
-
-This is what the WebView loads. When you update `index.html`, copy it here again before building.
+> **Important:** these are two separate files. Whenever you edit the root
+> `index.html`, copy it to `assets/` again **before every build**, otherwise
+> the app keeps running the old version. A common way to remember: run the
+> `cp` command above first, then press Run in Android Studio.
 
 ### 3. Run on a physical device
 

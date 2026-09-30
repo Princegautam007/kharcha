@@ -136,4 +136,70 @@ test('changing month exits select mode', () => {
   assert.strictEqual(bulkBar(app), 'none');
 });
 
+console.log('\nbulk recategorise');
+
+test('the bulk bar offers every category', () => {
+  const app = seededApp();
+  app.run('toggleSelectMode()');
+  const options = app.run("document.getElementById('bulkCat').innerHTML");
+  for (const cat of ['food', 'transport', 'shopping', 'bills', 'health', 'fuel', 'groceries', 'other']) {
+    assert.ok(options.includes('value="' + cat + '"'), 'missing option: ' + cat);
+  }
+  assert.ok(options.includes('Set category'), 'has a placeholder');
+});
+
+test('applies the chosen category to the selected rows only', () => {
+  const app = seededApp();
+  app.run('toggleSelectMode()');
+  app.run('toggleSelect(1); toggleSelect(2)');
+  app.run('setCategorySelected("bills")');
+  assert.strictEqual(app.run('expenses.find(e => e.id === 1).category'), 'bills');
+  assert.strictEqual(app.run('expenses.find(e => e.id === 2).category'), 'bills');
+  assert.strictEqual(app.run('expenses.find(e => e.id === 3).category'), 'other', 'unselected row untouched');
+  assert.strictEqual(
+    app.run("document.getElementById('toast').textContent"),
+    'Updated 2 transactions'
+  );
+});
+
+test('the change is saved to storage', () => {
+  const app = seededApp();
+  app.run('toggleSelectMode()');
+  app.run('toggleSelect(1)');
+  app.run('setCategorySelected("health")');
+  const today = new Date();
+  const stored = JSON.parse(app.storage.getItem(`kharcha_${today.getFullYear()}_${today.getMonth() + 1}`));
+  assert.strictEqual(stored.find(e => e.id === 1).category, 'health');
+});
+
+test('a single selection uses singular wording and stays selected', () => {
+  const app = seededApp();
+  app.run('toggleSelectMode()');
+  app.run('toggleSelect(3)');
+  app.run('setCategorySelected("food")');
+  assert.strictEqual(
+    app.run("document.getElementById('toast').textContent"),
+    'Updated 1 transaction'
+  );
+  assert.strictEqual(app.run('selectedIds.size'), 1, 'selection kept for review');
+  assert.strictEqual(app.run("document.getElementById('bulkCat').value"), '', 'dropdown reset');
+});
+
+test('an unknown category is ignored', () => {
+  const app = seededApp();
+  app.run('toggleSelectMode()');
+  app.run('toggleSelect(1)');
+  app.run("setCategorySelected('pets')");
+  app.run("setCategorySelected('constructor')");
+  assert.strictEqual(app.run('expenses.find(e => e.id === 1).category'), 'food', 'unchanged');
+});
+
+test('with nothing selected the change is ignored', () => {
+  const app = seededApp();
+  app.run('toggleSelectMode()');
+  app.run('setCategorySelected("food")');
+  assert.strictEqual(app.run("document.getElementById('toast').textContent"), '', 'no toast');
+  assert.strictEqual(app.run('expenses.find(e => e.id === 2).category'), 'transport');
+});
+
 finish();

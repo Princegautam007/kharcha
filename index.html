@@ -103,6 +103,13 @@
     .filter-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 12px; white-space: nowrap; cursor: pointer; color: var(--text2); transition: all 0.15s; }
     .filter-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
+    /* SEARCH */
+    .search-box { position: relative; margin-bottom: 12px; }
+    .search-box input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 14px 11px 36px; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.15s; }
+    .search-box input:focus { border-color: var(--primary); }
+    .search-box input::placeholder { color: var(--text2); }
+    .search-box .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text2); pointer-events: none; }
+
     .tx-list { display: flex; flex-direction: column; gap: 8px; }
     .tx-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; align-items: center; gap: 12px; }
     .tx-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
@@ -254,6 +261,12 @@
   <!-- Add Button -->
   <button class="add-btn" onclick="openModal()">+ Add Expense</button>
 
+  <!-- Search -->
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="search" id="searchInput" placeholder="Search merchant, amount, category..." oninput="searchExpenses(this.value)" />
+  </div>
+
   <!-- Filters -->
   <div class="filters" id="filters"></div>
 
@@ -350,6 +363,7 @@ CATEGORIES.forEach(c => CAT_MAP[c.id] = c);
 // ---- STATE ----
 let currentDate = new Date();
 let selectedCat = 'all';
+let searchQuery = '';
 let selectedModalCat = 'other';
 let editingExpenseId = null;
 let expenses = [];
@@ -1011,12 +1025,34 @@ function setFilter(cat) {
   renderTxList();
 }
 
+// Filters the transaction list by free text. Matches merchant, amount,
+// category and date so people can find a purchase without knowing where it is.
+function searchExpenses(query) {
+  searchQuery = query == null ? '' : String(query);
+  renderTxList();
+}
+
+function matchesSearch(e, q) {
+  if (!q) return true;
+  const s = q.toLowerCase();
+  if ((e.merchant || '').toLowerCase().indexOf(s) !== -1) return true;
+  if (String(e.amount).toLowerCase().indexOf(s) !== -1) return true;
+  const cat = CAT_MAP[e.category];
+  if (cat && (cat.label + ' ' + cat.id).toLowerCase().indexOf(s) !== -1) return true;
+  if (e.date && String(e.date).slice(0, 10).toLowerCase().indexOf(s) !== -1) return true;
+  return false;
+}
+
 function renderTxList() {
-  const filtered = selectedCat === 'all' ? expenses : expenses.filter(e => e.category === selectedCat);
+  const q = searchQuery.trim();
+  const filtered = expenses.filter(e =>
+    (selectedCat === 'all' || e.category === selectedCat) && matchesSearch(e, q)
+  );
   document.getElementById('filteredCount').textContent = filtered.length + ' items';
   const el = document.getElementById('txList');
   if (filtered.length === 0) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No transactions yet</div></div>';
+    const msg = (q || selectedCat !== 'all') ? 'No transactions match' : 'No transactions yet';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">' + msg + '</div></div>';
     return;
   }
   el.innerHTML = filtered.map(e => {

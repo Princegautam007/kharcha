@@ -41,6 +41,33 @@ Backup files made before budgets existed still restore normally.
 
 Budgets stay on your device in the browser storage, under the name `kharcha_budgets`. Nothing is sent anywhere.
 
+## Category mapping examples
+
+A budget only counts spending that lands in that category, so it helps to know
+how transactions are grouped. Kharcha picks the category from the merchant name
+in the SMS (or the category you choose when adding by hand):
+
+| Category  | Typical merchants and keywords                                              |
+|-----------|-----------------------------------------------------------------------------|
+| Food      | Swiggy, Zomato, KFC, McDonald's, pizza, cafe, restaurant, Starbucks         |
+| Groceries | Blinkit, Zepto, BigBasket, DMart, JioMart, kirana, grocery store            |
+| Transport | Ola, Uber, Rapido, IRCTC, metro, redbus, train, flight, bus, FASTag, toll   |
+| Shopping  | Amazon, Flipkart, Myntra, Ajio, Nykaa, Croma, Decathlon, IKEA               |
+| Bills     | Jio, Airtel, electricity, water, gas, recharge, Netflix, broadband, insurance |
+| Health    | Apollo Pharmacy, PharmEasy, Tata 1mg, hospital, clinic, doctor, medicine    |
+| Fuel      | petrol, diesel, HP, Indian Oil, HPCL, BPCL, Shell                           |
+| Other     | everything that does not match the keywords above                           |
+
+Examples:
+
+- `Rs. 640 paid to BLINKIT via UPI` counts towards your **Groceries** budget,
+  not Food — grocery stores are matched before restaurants.
+- `Rs. 249 paid to Swiggy` counts towards **Food**.
+- A salary credit or a refund does not touch any budget; only debits count.
+
+You can always fix a wrong category by editing the transaction, and the budget
+follows the new category from then on.
+
 ## For developers
 
 The tests for this feature are in `tests/budgets.test.js`. To run them you need Node.js 18 or newer. From the project folder, run:

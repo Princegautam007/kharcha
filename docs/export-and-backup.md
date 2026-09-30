@@ -3,6 +3,27 @@
 Kharcha keeps your data on your device only. These three buttons, at the bottom
 of the page under "Your data", let you take a copy.
 
+## Where the buttons are
+
+Scroll to the very bottom of the main page, past the transaction list. You will
+see the heading **Your data** with three buttons side by side:
+
+```
+┌───────────────────────────────────────────────┐
+│  Transactions                                │
+│  ───────────────────────────────────────────  │
+│  ... list of your expenses ...               │
+│                                              │
+│  YOUR DATA                                   │
+│  ┌──────────────┬──────────┬──────────┐       │
+│  │ Download CSV │ Backup   │ Restore  │       │
+│  └──────────────┴──────────┴──────────┘       │
+└───────────────────────────────────────────────┘
+```
+
+On a phone the three buttons sit in one row and wrap to a new line if the
+screen is narrow.
+
 ## Download CSV
 
 Saves the month you are looking at as a spreadsheet file, for example

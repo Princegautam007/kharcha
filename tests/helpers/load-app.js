@@ -33,6 +33,7 @@ function makeCanvasContext() {
 
 function makeElement() {
   const classes = new Set();
+  const children = {};
   return {
     style: {},
     dataset: {},
@@ -50,6 +51,11 @@ function makeElement() {
     remove() {},
     appendChild() {},
     getContext() { return makeCanvasContext(); },
+    // Elements like the modal look up children (e.g. .modal-title).
+    querySelector(sel) {
+      if (!children[sel]) children[sel] = makeElement();
+      return children[sel];
+    },
   };
 }
 

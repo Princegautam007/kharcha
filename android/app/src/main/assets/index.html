@@ -512,6 +512,16 @@ function parseSms(text, senderId) {
   // Skip OTP / promotional SMS
   if (/\botp\b|\bpassword\b|\bverif/i.test(text)) return null;
 
+  // Skip UPI collect requests: money asked FROM you is not a transaction yet.
+  if (/collect request|request money|approve only if expected/i.test(text)) return null;
+
+  // Skip balance-only SMS ("Available balance is Rs.X"). Real transactions
+  // often append balance info ("Avl Bal: Rs.Y"), so reject only when no
+  // transaction verb is present anywhere in the message.
+  const mentionsBalance = /available balance|avl\.?\s*bal|a\/c balance|account balance|balance (is|as on|of)|bal enquiry|min balance|low balance/i.test(text);
+  const hasTxVerb = /debited|credited|spent|\bpaid\b|transferred|withdrawn|withdrawal|deposited|refund|reversal|cashback|added|used for|salary|\bemi\b|toll|purchase|payment/i.test(text);
+  if (mentionsBalance && !hasTxVerb) return null;
+
   let amount = null;
   let type = null;
   let merchant = null;
@@ -534,28 +544,65 @@ function parseSms(text, senderId) {
   else if (/credited|received|credit|cr\b|cashback|refund|refunded|reversal|reversed/i.test(text)) type = 'credit';
   else type = 'debit';
 
-  // Merchant extraction
-  const merchantPatterns = [
-    /\b([A-Za-z0-9._-]{2,60}@[A-Za-z0-9._-]{2,30})\b/i,
-    /(?:VPA|UPI ID)[:\s]+([A-Za-z0-9._-]{2,60}@[A-Za-z0-9._-]{2,30})/i,
-    /(?:refund(?:ed)?|cashback|reversal).{0,50}?(?:from|by|at)\s+([A-Za-z][A-Za-z0-9 &'._-]{1,49}?)(?=\s+(?:on|via|using|ref|upi|utr|a\/c|acct|ending|and|to|from)\b|[.,;]|$)/i,
-    /(?:paid to|payment to|sent to|transferred to|to)\s+([A-Za-z][A-Za-z0-9 &'._@-]{1,49}?)(?=\s+(?:on|via|using|ref|upi|utr|a\/c|acct|account|from)\b|[.,;]|$)/i,
-    /(?:at|for|towards|merchant|store)\s*[:\s]+([A-Za-z][A-Za-z0-9 &'._@-]{1,49}?)(?=\s+(?:on|via|using|ref|upi|utr|a\/c|acct|account|from)\b|[.,;]|$)/i,
-  ];
-  for (const p of merchantPatterns) {
-    const m = text.match(p);
-    if (!m) continue;
-    const candidate = m[1].trim().replace(/[.,;]+$/, '');
-    if (/^(your\s+)?(?:account|a\/c|acct)$/i.test(candidate)) continue;
-    merchant = candidate;
-    break;
+  // Merchant extraction. Captures use a tempered pattern so they stop at the
+  // first terminator word instead of swallowing the real merchant that comes
+  // later ("spent on X Card ... at MERCHANT"). Candidates are vetted; first
+  // survivor wins.
+  const TERM = 'on|via|for|from|to|towards|using|ref|upi|utr|a\\/c|acct|account|ending|linked|completed|processed|by|at|and';
+  const WORD = '(?:(?!\\s+(?:' + TERM + ')\\b|[.,;])[A-Za-z0-9 &\'._@-])';
+  const merchantTriggers = [
+    /\b([A-Za-z0-9._-]{2,60}@[A-Za-z0-9._-]{2,30})\b/,
+    /(?:VPA|UPI ID)[:\s]+([A-Za-z0-9._-]{2,60}@[A-Za-z0-9._-]{2,30})/,
+    /(?:refund(?:ed)?|cashback|reversal).{0,60}?(?:by|from|at)\s+([A-Za-z][A-Za-z0-9 &'._-]{0,59})/,
+    /(?:to|towards|paid to|payment to|sent to|transferred to)\s+([A-Za-z][A-Za-z0-9 &'._@-]{0,59})/,
+    /(?:from|by)\s+([A-Za-z][A-Za-z0-9 &'._-]{0,59})/,
+    /(?:at|on)\s+([A-Za-z][A-Za-z0-9 &'._@-]{0,59})/,
+    /for\s+([A-Za-z][A-Za-z0-9 &'._@-]{0,59})/,
+    /via\s+([A-Za-z][A-Za-z0-9 &'._@-]{0,59})/,
+  ].map(r => new RegExp(r.source.replace(/\[A-Za-z0-9 &'._@-\]\{0,59\}/g, WORD + '{0,59}').replace(/\[A-Za-z0-9 &'._-\]\{0,59\}/g, WORD + '{0,59}'), 'gi'));
+  const payRailRe = /^(upi|neft|imps|rtgs)$/i;
+  const rejectRe = /^(your\s+)?(?:account|a\/c|acct)$|^(your|my)$/i;
+  const dateRe = /^\d{1,2}[-/]\w{3}[-/]\d{2,4}$|^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}$|^sep-\d{2}$|^\d{1,2}$/i;
+  const txWordRe = /^(debited|credited|spent|paid|transferred|withdrawn|deposited|reversed|refund(?:ed)?|cashback|reversal|received|processed|completed|added|failed)$/i;
+  const bankWordRe = /bank|hdfc|sbi|icici|axis|kotak|pnb|phonepe|paytm|gpay|google pay|yes bank|federal|union|canara|uco|idfc|bob|baroda/i;
+  // A real "CARD" merchant (METRO CARD) is kept. A bank card reference always
+  // carries credit/debit, an ending number, a masked number, or a bank name.
+  const bankCardRe = /\bcard\b/i;
+  const bankCardProofRe = /credit|debit|ending|\bxx?\d|bank|hdfc|sbi|icici|axis|kotak|pnb|phonepe|paytm|gpay|federal|union|canara|uco|idfc|bob/i;
+  const junkLeadingRe = /^(?:a\/c|acct|account)\s+[A-Za-z0-9]+\s+|^card\s+[A-Za-z0-9]+\s+|^on\s+|^\d{1,2}-\w{3}-\d{2,4}\s+/i;
+  function cleanMerchant(raw) {
+    let c = String(raw).trim().replace(/\s+/g, ' ');
+    const cut = c.search(/\s+(?:on|via|for|from|to|towards|using|ref|upi|utr|a\/c|acct|account|ending|linked|completed|processed|by|at|and)\b|[.,;]/i);
+    if (cut > 0) c = c.slice(0, cut).trim();
+    c = c.replace(/^(?:on\s+)?\d{1,2}-\w{3}-\d{2,4}\s+/i, '');
+    c = c.replace(junkLeadingRe, '');
+    return c;
+  }
+  for (const trg of merchantTriggers) {
+    for (const m of text.matchAll(trg)) {
+      if (!m || !m[1]) continue;
+      const candidate = cleanMerchant(m[1]);
+      if (candidate.length < 2) continue;
+      if (rejectRe.test(candidate)) continue;
+      if (dateRe.test(candidate)) continue;
+      if (payRailRe.test(candidate)) continue;
+      if (txWordRe.test(candidate)) continue;
+      if (/^(your|my)\s+/i.test(candidate)) continue;
+      if (/^\d[\d,.]*$/.test(candidate)) continue;
+      if (bankCardRe.test(candidate) && bankCardProofRe.test(candidate)) continue;
+      if (/\b(?:rs\.?|inr)\b/i.test(candidate)) continue;
+      if (bankWordRe.test(candidate) && !/petrol|kirana|store|mart|mall|shop|foods|hospital|pharmacy|cabs|electricity/i.test(candidate)) continue;
+      merchant = candidate;
+      break;
+    }
+    if (merchant) break;
   }
 
   // Bank detection. senderId lets Android provide the real SMS sender when
   // the bank or payment app name is not present in the message body.
   const bankRules = [
     { keys: ['canara bank', 'canbnk', 'canara', 'cnrb'], name: 'Canara Bank' },
-    { keys: ['indian overseas bank', 'iobank', 'iob'], name: 'Indian Overseas Bank' },
+    { keys: ['indian overseas bank', 'iobank'], name: 'Indian Overseas Bank' },
     { keys: ['uco bank', 'ucobk', 'uco'], name: 'UCO Bank' },
     { keys: ['idfc first bank', 'idfc first', 'idfcfb', 'idfc'], name: 'IDFC First Bank' },
     { keys: ['bank of baroda', 'bob', 'baroda'], name: 'BOB' },
@@ -586,7 +633,7 @@ function parseSms(text, senderId) {
   if (merchant) {
     const m = merchant.toLowerCase();
     if (/swiggy|zomato|mcdonald|kfc|domino|pizza hut|pizza|cafe|restaurant|eat|biryani|dhaba|food|starbucks|subway|burger king|chaayos|haldiram/.test(m)) category = 'food';
-    else if (/blinkit|zepto|bigbasket|grofers|dmart|jiomart|instamart|reliance fresh|more supermarket|nature'?s basket|grocery|kirana|supermart/.test(m)) category = 'groceries';
+    else if (/blinkit|zepto|dunzo|bigbasket|grofers|dmart|jiomart|instamart|reliance fresh|more supermarket|nature'?s basket|grocery|kirana|supermart/.test(m)) category = 'groceries';
     else if (/ola|uber|rapido|indrive|blu smart|metro|irctc|makemytrip|cleartrip|easemytrip|redbus|train|flight|bus|cab|auto|parking|fastag|toll/.test(m)) category = 'transport';
     else if (/amazon|flipkart|myntra|ajio|meesho|nykaa|croma|reliance digital|decathlon|ikea|tata cliq|shop|mall|store|fashion|clothes/.test(m)) category = 'shopping';
     else if (/jio|airtel|bsnl|vi |vodafone|electricity|water|gas|bill|recharge|netflix|hotstar|prime video|spotify|youtube premium|broadband|d2h|insurance/.test(m)) category = 'bills';

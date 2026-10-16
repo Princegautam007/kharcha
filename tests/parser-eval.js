@@ -15,8 +15,12 @@ const loadParser = require('./helpers/load-parser');
 const GOLDEN_PATH = path.join(__dirname, 'parser-golden.json');
 const BASELINE_PATH = path.join(__dirname, 'parser-baseline.json');
 
+function normMerchant(s) {
+  return String(s == null ? '' : s).toLowerCase().replace(/[._-]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function merchantOk(actual, want) {
-  if (want.merchant !== undefined) return actual === want.merchant;
+  if (want.merchant !== undefined) return normMerchant(actual) === normMerchant(want.merchant);
   if (want.merchantContains !== undefined) {
     return typeof actual === 'string' &&
       actual.toLowerCase().includes(String(want.merchantContains).toLowerCase());

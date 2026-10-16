@@ -29,3 +29,8 @@ jobs:
         # After a real parser fix, re-record the baseline locally with
         # `node tests/parser-eval.js --update` and commit the new file.
         run: node tests/parser-eval.js
+
+      - name: Run adversarial parser checks
+        # Hostile input (typos, corrupted stores, giant strings) must never
+        # crash or merge unrelated merchants.
+        run: node tests/canonical-adv.js

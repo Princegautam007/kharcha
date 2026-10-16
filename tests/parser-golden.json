@@ -55,7 +55,7 @@
     "expected": { "amount": 1120, "type": "debit", "merchant": "ZOMATO", "category": "food", "bank": "Axis" } },
   { "id": "kotak-neft-credit", "sender": "KOTAKB",
     "text": "Your Kotak A/c XX3344 is credited with INR 25,000.00 by NEFT from ACME SERVICES on 27-Sep-26.",
-    "expected": { "amount": 25000, "type": "credit", "merchantIsFallback": true, "category": "other", "bank": "Kotak" } },
+    "expected": { "amount": 25000, "type": "credit", "merchant": "ACME SERVICES", "category": "other", "bank": "Kotak" } },
   { "id": "pnb-upi-debit", "sender": "PNBBNK",
     "text": "Rs. 560.00 paid to BIGBASKET from PNB A/c XX5566 via UPI. Ref 778899.",
     "expected": { "amount": 560, "type": "debit", "merchant": "BIGBASKET", "category": "groceries", "bank": "PNB" } },

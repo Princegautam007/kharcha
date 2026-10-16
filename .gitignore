@@ -4,6 +4,12 @@ android/app/build/
 android/local.properties
 android/*.iml
 android/.idea/
+android/build.log
+android/_sp.log
+
+# Local build helper scripts - machine-specific, never push
+_build.bat
+_build.ps1
 
 # Memory folder - local only, never push
 memory/

@@ -548,11 +548,11 @@ function parseSms(text, senderId) {
   // first terminator word instead of swallowing the real merchant that comes
   // later ("spent on X Card ... at MERCHANT"). Candidates are vetted; first
   // survivor wins.
-  const TERM = 'on|via|for|from|to|towards|using|ref|upi|utr|a\\/c|acct|account|ending|linked|completed|processed|by|at|and';
+  const TERM = 'on|via|for|from|to|towards|using|ref|upi|utr|a\\/c|acct|account|ending|linked|completed|processed|by|at';
   const WORD = '(?:(?!\\s+(?:' + TERM + ')\\b|[.,;])[A-Za-z0-9 &\'._@-])';
   const merchantTriggers = [
-    /\b([A-Za-z0-9._-]{2,60}@[A-Za-z0-9._-]{2,30})\b/,
-    /(?:VPA|UPI ID)[:\s]+([A-Za-z0-9._-]{2,60}@[A-Za-z0-9._-]{2,30})/,
+    /(?:^|[\s:>])([A-Za-z][A-Za-z0-9._-]{1,59}@[A-Za-z0-9._-]{2,30})(?![A-Za-z0-9._-])/,
+    /(?:VPA|UPI ID)[:\s]+([A-Za-z0-9._-]{2,60}@[A-Za-z0-9._-]{2,30})(?![A-Za-z0-9._-])/,
     /(?:refund(?:ed)?|cashback|reversal).{0,60}?(?:by|from|at)\s+([A-Za-z][A-Za-z0-9 &'._-]{0,59})/,
     /(?:to|towards|paid to|payment to|sent to|transferred to)\s+([A-Za-z][A-Za-z0-9 &'._@-]{0,59})/,
     /(?:from|by)\s+([A-Za-z][A-Za-z0-9 &'._-]{0,59})/,
@@ -572,16 +572,29 @@ function parseSms(text, senderId) {
   const junkLeadingRe = /^(?:a\/c|acct|account)\s+[A-Za-z0-9]+\s+|^card\s+[A-Za-z0-9]+\s+|^on\s+|^\d{1,2}-\w{3}-\d{2,4}\s+/i;
   function cleanMerchant(raw) {
     let c = String(raw).trim().replace(/\s+/g, ' ');
-    const cut = c.search(/\s+(?:on|via|for|from|to|towards|using|ref|upi|utr|a\/c|acct|account|ending|linked|completed|processed|by|at|and)\b|[.,;]/i);
+    // "ZOMATO and credited to..." -> "ZOMATO": cut at "and" only when a
+    // transaction verb follows. A plain "and" can be part of the name
+    // ("Sri Sai Textiles and Garments").
+    c = c.replace(/\s+and\s+(credited|debited|paid|received|processed|completed|reversed|refunded|reversal|cashback)\b.*$/i, '');
+    const cut = c.search(/\s+(?:on|via|for|from|to|towards|using|ref|upi|utr|a\/c|acct|account|ending|linked|completed|processed|by|at)\b|[.,;]/i);
     if (cut > 0) c = c.slice(0, cut).trim();
     c = c.replace(/^(?:on\s+)?\d{1,2}-\w{3}-\d{2,4}\s+/i, '');
     c = c.replace(junkLeadingRe, '');
+    // Keep merchant names intact: only drop a trailing payment-rail word
+    // ("SWIGGY via UPI" -> "SWIGGY"), never chop inside the name.
+    c = c.replace(/\s+(?:via\s+upi|upi|neft|imps|rtgs)$/i, '');
     return c;
   }
+  const VPA_RE = /^[A-Za-z][A-Za-z0-9._-]{1,59}@[A-Za-z0-9._-]{2,30}$/;
   for (const trg of merchantTriggers) {
     for (const m of text.matchAll(trg)) {
       if (!m || !m[1]) continue;
-      const candidate = cleanMerchant(m[1]);
+      const raw = m[1].trim();
+      // VPA handles go straight through: they are structurally validated and
+      // must skip cleanMerchant (chops at dots) and the bank-word veto
+      // ("rahul.sharma42@okhdfc" contains "hdfc").
+      if (VPA_RE.test(raw)) { merchant = raw; break; }
+      const candidate = cleanMerchant(raw);
       if (candidate.length < 2) continue;
       if (rejectRe.test(candidate)) continue;
       if (dateRe.test(candidate)) continue;
@@ -627,6 +640,121 @@ function parseSms(text, senderId) {
     });
     if (found) { bank = rule.name; break; }
   }
+
+  // ---- MERCHANT CANONICALIZATION (Phase 2) ----
+  // "AMZN", "AMAZON PAY" and "amazon.in" all become one merchant: "Amazon".
+  const MERCHANT_ALIASES = [
+    { names: ['amazon', 'amzn', 'amazon pay', 'amazonpay', 'amazon.in'], canonical: 'Amazon' },
+    { names: ['flipkart', 'fkart'], canonical: 'Flipkart' },
+    { names: ['swiggy', 'swiggy foods', 'swiggy instamart'], canonical: 'Swiggy' },
+    { names: ['zomato', 'zomato food'], canonical: 'Zomato' },
+    { names: ['blinkit', 'blink it', 'grofers'], canonical: 'Blinkit' },
+    { names: ['zepto'], canonical: 'Zepto' },
+    { names: ['bigbasket', 'big basket'], canonical: 'BigBasket' },
+    { names: ['dmart', 'd mart', 'dmart ready'], canonical: 'DMart' },
+    { names: ['jiomart', 'jio mart'], canonical: 'JioMart' },
+    { names: ['myntra'], canonical: 'Myntra' },
+    { names: ['ajio'], canonical: 'Ajio' },
+    { names: ['nykaa'], canonical: 'Nykaa' },
+    { names: ['croma'], canonical: 'Croma' },
+    { names: ['uber', 'uber india', 'uber cabs'], canonical: 'Uber' },
+    { names: ['ola', 'ola cabs', 'olacabs'], canonical: 'Ola' },
+    { names: ['rapido'], canonical: 'Rapido' },
+    { names: ['irctc'], canonical: 'IRCTC' },
+    { names: ['makemytrip', 'make my trip', 'mmt'], canonical: 'MakeMyTrip' },
+    { names: ['redbus', 'red bus'], canonical: 'RedBus' },
+    { names: ['indigo', 'indigo airlines'], canonical: 'IndiGo' },
+    { names: ['air india'], canonical: 'Air India' },
+    { names: ['netflix'], canonical: 'Netflix' },
+    { names: ['hotstar', 'disney hotstar', 'jiohotstar'], canonical: 'Hotstar' },
+    { names: ['prime video', 'amazon prime'], canonical: 'Prime Video' },
+    { names: ['spotify'], canonical: 'Spotify' },
+    { names: ['jio', 'jio recharge', 'reliance jio'], canonical: 'Jio' },
+    { names: ['airtel', 'airtel prepaid', 'bharti airtel'], canonical: 'Airtel' },
+    { names: ['vodafone', 'vi recharge', 'vodafone idea'], canonical: 'Vi' },
+    { names: ['bsnl'], canonical: 'BSNL' },
+    { names: ['apollo', 'apollo pharmacy', 'apollo hospital', 'apollo hospitals'], canonical: 'Apollo' },
+    { names: ['pharmeasy', 'pharm easy'], canonical: 'PharmEasy' },
+    { names: ['tata 1mg', '1mg'], canonical: 'Tata 1mg' },
+    { names: ['medplus'], canonical: 'MedPlus' },
+    { names: ['netmeds'], canonical: 'Netmeds' },
+    { names: ['mcdonald', 'mcdonalds', 'mcdonald\'s'], canonical: 'McDonalds' },
+    { names: ['kfc'], canonical: 'KFC' },
+    { names: ['domino', 'dominos', 'domino\'s'], canonical: 'Dominos' },
+    { names: ['pizza hut', 'pizzahut'], canonical: 'Pizza Hut' },
+    { names: ['starbucks'], canonical: 'Starbucks' },
+    { names: ['subway'], canonical: 'Subway' },
+    { names: ['burger king'], canonical: 'Burger King' },
+    { names: ['haldiram', 'haldirams'], canonical: 'Haldirams' },
+    { names: ['dunzo'], canonical: 'Dunzo' },
+    { names: ['bookmyshow', 'book my show', 'bms'], canonical: 'BookMyShow' },
+    { names: ['fastag', 'fastag toll'], canonical: 'FASTag' },
+    { names: ['metro', 'metro card', 'dmrc'], canonical: 'Metro' },
+    { names: ['hp petrol', 'hp petrol pump', 'hindustan petroleum'], canonical: 'HP Petrol' },
+    { names: ['indian oil', 'iocl', 'indianoil'], canonical: 'Indian Oil' },
+    { names: ['bharat petroleum', 'bpcl'], canonical: 'Bharat Petroleum' },
+    { names: ['shell'], canonical: 'Shell' },
+  ];
+  const ALIAS_MAP = {};
+  MERCHANT_ALIASES.forEach(entry => {
+    entry.names.forEach(n => { ALIAS_MAP[n] = entry.canonical; });
+  });
+
+  // Edit distance with early exit: capped, so one typo matches but
+  // unrelated names never merge.
+  function editDistance(a, b, cap) {
+    const la = a.length, lb = b.length;
+    if (Math.abs(la - lb) > cap) return cap + 1;
+    let prev = [];
+    for (let j = 0; j <= lb; j++) prev[j] = j;
+    for (let i = 1; i <= la; i++) {
+      const cur = [i];
+      let rowMin = i;
+      for (let j = 1; j <= lb; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+        if (cur[j] < rowMin) rowMin = cur[j];
+      }
+      if (rowMin > cap) return cap + 1;
+      prev = cur;
+    }
+    return prev[lb];
+  }
+
+  function canonicalizeMerchant(raw) {
+    if (!raw) return raw;
+    // UPI handle -> readable name: "rahul.sharma42@okhdfc" -> "Rahul Sharma".
+    const vpaMatch = String(raw).match(/^([A-Za-z0-9._-]{2,60})@[A-Za-z0-9._-]{2,30}$/);
+    if (vpaMatch) {
+      const namePart = vpaMatch[1].replace(/[._-]+/g, ' ').replace(/\d+/g, ' ').replace(/\s+/g, ' ').trim();
+      return namePart ? titleCase(namePart) : String(raw).trim();
+    }
+    const key = String(raw).toLowerCase().replace(/[._-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    // Exact alias hit.
+    if (ALIAS_MAP[key]) return ALIAS_MAP[key];
+    // User's own rename wins over everything.
+    try {
+      const learned = JSON.parse(localStorage.getItem('kharcha_merchant_aliases') || '{}');
+      if (learned[key]) return learned[key];
+    } catch (e) { /* corrupted store: ignore */ }
+    // Fuzzy: one small typo still merges ("DOMINOS" -> "Dominos").
+    let best = null, bestDist = 3;
+    for (const alias in ALIAS_MAP) {
+      if (Math.abs(alias.length - key.length) > 2) continue;
+      const d = editDistance(key, alias, 2);
+      if (d < bestDist) { bestDist = d; best = alias; }
+    }
+    if (best) return ALIAS_MAP[best];
+    // Unknown merchant: tidy raw text into a readable name.
+    const tidy = key.split(' ').filter(w => w && !/^\d+$/.test(w)).map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+    return tidy || String(raw).trim();
+  }
+
+  function titleCase(s) {
+    return String(s).toLowerCase().split(' ').filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+  }
+
+  if (merchant) merchant = canonicalizeMerchant(merchant);
 
   // Auto-category from merchant name
   let category = 'other';
@@ -1443,11 +1571,21 @@ function saveExpense() {
     source: 'manual',
   };
 
+  // Learn the rename: editing an SMS expense's description teaches the app
+  // that future SMS with the same raw merchant should show the new name.
   if (editingExpenseId) {
-    // Update existing expense
     const idx = expenses.findIndex(e => String(e.id) === String(editingExpenseId));
     if (idx >= 0) {
+      const wasSms = expenses[idx].source === 'sms';
+      const oldName = expenses[idx].merchant;
       expenses[idx] = expense;
+      if (wasSms && oldName && desc && oldName !== desc) {
+        try {
+          const store = JSON.parse(localStorage.getItem('kharcha_merchant_aliases') || '{}');
+          store[String(oldName).toLowerCase().trim()] = desc;
+          localStorage.setItem('kharcha_merchant_aliases', JSON.stringify(store));
+        } catch (e) { /* corrupted store: keep the edit, skip learning */ }
+      }
     }
     editingExpenseId = null;
     showToast('Updated!', 'success');

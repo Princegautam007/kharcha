@@ -1,0 +1,10 @@
+{
+  "amount": 100,
+  "type": 100,
+  "merchant": 84.1,
+  "category": 90.9,
+  "bank": 97.7,
+  "noiseRejected": 71.4,
+  "overall": 94.5,
+  "falsePositives": 2
+}

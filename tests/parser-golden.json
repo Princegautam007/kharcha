@@ -40,7 +40,7 @@
     "expected": { "amount": 649, "type": "debit", "merchant": "NETFLIX", "category": "bills", "bank": "Paytm" } },
   { "id": "upi-id-merchant", "sender": "UPIBNK",
     "text": "Rs. 450 sent to foodcorner@upi from your account.",
-    "expected": { "amount": 450, "type": "debit", "merchant": "foodcorner@upi", "category": "other", "bank": null } },
+    "expected": { "amount": 450, "type": "debit", "merchant": "foodcorner@upi", "category": "food", "bank": null } },
   { "id": "otp-skip", "sender": "HDFCBK",
     "text": "Your OTP is 123456 for login. Do not share this code.",
     "expected": null },

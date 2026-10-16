@@ -61,6 +61,27 @@ Merchant name is matched against keyword lists:
 
 SMS containing `otp`, `password`, or `verif` are immediately discarded. These are OTP messages, not transactions.
 
+## Eval scoreboard (Phase 0)
+
+`node tests/parser-eval.js` runs all of `tests/parser-golden.json` (51 anonymized
+real-format SMS) through the real parser and reports per-field accuracy:
+
+| Field | Today | Target (Phase 1+) |
+|---|---|---|
+| amount | 100% (44/44) | hold 100% |
+| type | 100% (44/44) | hold 100% |
+| merchant | 84.1% (37/44) | 90%+ |
+| category | 90.9% (40/44) | 95%+ |
+| bank | 97.7% (43/44) | hold 97%+ |
+| noise rejected | 71.4% (5/7) | 100% |
+| overall | 94.5% | 98%+ |
+| false positives | 2 | 0 |
+
+The 2 false positives are balance-only SMS and UPI collect requests being
+logged as transactions. The harness fails CI only on a regression versus
+`tests/parser-baseline.json`. After a real fix, re-record with
+`node tests/parser-eval.js --update` and commit the new baseline.
+
 ## Example inputs and outputs
 
 Input:

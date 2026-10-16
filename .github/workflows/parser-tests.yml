@@ -22,3 +22,10 @@ jobs:
         # node:test suites and the plain mini-test scripts alike. A failure
         # in any suite fails the build.
         run: node --test tests/*.test.js
+
+      - name: Check parser accuracy against baseline
+        # The eval harness measures only. It passes when scores hold steady
+        # and fails only on a regression vs tests/parser-baseline.json.
+        # After a real parser fix, re-record the baseline locally with
+        # `node tests/parser-eval.js --update` and commit the new file.
+        run: node tests/parser-eval.js

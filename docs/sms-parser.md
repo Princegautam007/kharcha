@@ -61,27 +61,45 @@ Merchant name is matched against keyword lists:
 
 SMS containing `otp`, `password`, or `verif` are immediately discarded. These are OTP messages, not transactions.
 
+## Merchant canonicalization (Phase 2)
+
+Raw names are cleaned before display and categorization:
+
+- **Alias map** — variant spellings merge (`AMZN`, `AMAZON PAY` -> `Amazon`;
+  `DOMINO'S` -> `Dominos`; `OLA CABS` -> `Ola`; `APOLLO PHARMACY` -> `Apollo`).
+  About 45 merchants are covered; the full list lives in `MERCHANT_ALIASES`.
+- **UPI handles** — `rahul.sharma42@okhdfc` becomes `Rahul Sharma`.
+- **Typo tolerance** — one small typo still merges (`SWIGY` -> `Swiggy`),
+  but unrelated names never merge (`SWIGGY Residency Hotel` stays).
+- **Unknown merchants** — tidied into readable names instead of raw fragments.
+- **Your renames win** — editing an SMS expense's description stores the
+  mapping in `localStorage` under `kharcha_merchant_aliases`, and future SMS
+  with the same raw merchant use your name. A corrupted store is ignored,
+  never crashes.
+
 ## Eval scoreboard (Phase 0)
 
 `node tests/parser-eval.js` runs all of `tests/parser-golden.json` (51 anonymized
 real-format SMS) through the real parser and reports per-field accuracy:
 
-| Field | Phase 0 | Phase 1 | Target |
+| Field | Phase 0 | Phase 1 | Phase 2 |
 |---|---|---|---|
-| amount | 100% (44/44) | 100% (44/44) | hold 100% |
-| type | 100% (44/44) | 100% (44/44) | hold 100% |
-| merchant | 84.1% (37/44) | 100% (44/44) | hold 100% |
-| category | 90.9% (40/44) | 100% (44/44) | hold 100% |
-| bank | 97.7% (43/44) | 100% (44/44) | hold 100% |
-| noise rejected | 71.4% (5/7) | 100% (7/7) | hold 100% |
-| overall | 94.5% | 100% | hold 100% |
-| false positives | 2 | 0 | hold 0 |
+| amount | 100% (44/44) | 100% (44/44) | 100% (53/53) |
+| type | 100% (44/44) | 100% (44/44) | 100% (53/53) |
+| merchant | 84.1% (37/44) | 100% (44/44) | 100% (53/53) |
+| category | 90.9% (40/44) | 100% (44/44) | 100% (53/53) |
+| bank | 97.7% (43/44) | 100% (44/44) | 100% (53/53) |
+| noise rejected | 71.4% (5/7) | 100% (7/7) | 100% (7/7) |
+| overall | 94.5% | 100% | 100% (60 SMS) |
+| false positives | 2 | 0 | 0 |
 
 Phase 1 fixed all 14 misses: balance-only and UPI collect-request SMS are
 rejected; merchant extraction uses tempered captures with candidate vetting;
-`iob` no longer misfires on JIO; Dunzo maps to groceries. The harness fails
-CI only on a regression versus `tests/parser-baseline.json`. After a real
-fix, re-record with `node tests/parser-eval.js --update` and commit the new
+`iob` no longer misfires on JIO; Dunzo maps to groceries.
+Phase 2 added merchant canonicalization (aliases, VPA parsing, typo merging,
+user-learned renames) with 9 new golden cases. The harness fails CI only on
+a regression versus `tests/parser-baseline.json`. After a real fix,
+re-record with `node tests/parser-eval.js --update` and commit the new
 baseline.
 
 ## Example inputs and outputs

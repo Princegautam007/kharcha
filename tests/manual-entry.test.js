@@ -153,4 +153,41 @@ test('closeModal clears the editing state and closes the modal', () => {
   assert.strictEqual(app.run("document.getElementById('modal').classList.contains('open')"), false);
 });
 
+console.log('\nmerchant rename learning');
+
+test('renaming an SMS expense remembers the mapping', () => {
+  const app = loadApp();
+  app.run(`expenses = [{ id: 1, amount: 100, type: 'debit', merchant: 'AMZN',
+    category: 'shopping', date: ${JSON.stringify(new Date().toISOString())}, source: 'sms' }]`);
+  app.run('openEditModal("1")');
+  app.elements['inp-desc'].value = 'Amazon';
+  app.elements['inp-date'].value = dateStr;
+  app.run('saveExpense()');
+  assert.deepStrictEqual(
+    JSON.parse(app.storage.getItem('kharcha_merchant_aliases') || '{}'),
+    { amzn: 'Amazon' }
+  );
+});
+
+test('renaming a manual expense learns nothing', () => {
+  const app = loadApp();
+  app.run('openModal()');
+  app.elements['inp-amount'].value = '10';
+  app.elements['inp-desc'].value = 'x';
+  app.elements['inp-date'].value = dateStr;
+  app.run('saveExpense()');
+  const id = app.run('expenses[0].id');
+  app.run(`openEditModal(${JSON.stringify(String(id))})`);
+  app.elements['inp-desc'].value = 'y';
+  app.run('saveExpense()');
+  assert.strictEqual(app.storage.getItem('kharcha_merchant_aliases'), null);
+});
+
+test('a learned rename applies to the next parsed SMS', () => {
+  const app = loadApp();
+  app.run(`localStorage.setItem('kharcha_merchant_aliases', JSON.stringify({ amzn: 'Amazon' }))`);
+  app.run(`window.onSmsReceived(${JSON.stringify('INR 500 spent on HDFC Card XX11 at AMZN on 18-Sep-26.')})`);
+  assert.strictEqual(app.run('expenses[0].merchant'), 'Amazon');
+});
+
 finish();

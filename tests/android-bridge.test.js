@@ -42,7 +42,7 @@ test('onSmsReceived logs a single transaction', () => {
   const app = loadApp();
   app.run(`window.onSmsReceived(${JSON.stringify(LIVE_SMS)})`);
   assert.strictEqual(app.run('expenses.length'), 1, 'one expense added');
-  assert.strictEqual(app.run('expenses[0].merchant'), 'SWIGGY');
+  assert.strictEqual(app.run('expenses[0].merchant'), 'Swiggy');
   assert.strictEqual(app.run('expenses[0].amount'), 450);
   assert.strictEqual(app.run('expenses[0].source'), 'sms');
   assert.ok(app.run("document.getElementById('toast').textContent").startsWith('SMS logged'));

@@ -17,7 +17,7 @@ test('parses UPI debit and detects HDFC plus food merchant', () => {
   );
   assert.equal(tx.amount, 1250);
   assert.equal(tx.type, 'debit');
-  assert.equal(tx.merchant, 'SWIGGY');
+  assert.equal(tx.merchant, 'Swiggy');
   assert.equal(tx.category, 'food');
   assert.equal(tx.bank, 'HDFC');
 });
@@ -28,7 +28,7 @@ test('parses card purchase and detects ICICI plus shopping merchant', () => {
     'ICICIB'
   );
   assert.equal(tx.amount, 2499);
-  assert.equal(tx.merchant, 'AMAZON');
+  assert.equal(tx.merchant, 'Amazon');
   assert.equal(tx.category, 'shopping');
   assert.equal(tx.bank, 'ICICI');
 });
@@ -39,7 +39,7 @@ test('detects Canara Bank from sender ID and extracts NEFT payee', () => {
     'CANBNK'
   );
   assert.equal(tx.amount, 5000);
-  assert.equal(tx.merchant, 'RAHUL SHARMA');
+  assert.equal(tx.merchant, 'Rahul Sharma');
   assert.equal(tx.bank, 'Canara Bank');
 });
 
@@ -57,7 +57,7 @@ test('detects UCO Bank and grocery merchants', () => {
     'UCO Bank A/c XX1234 debited by Rs. 350 at DMART on 29-Sep-26.'
   );
   assert.equal(tx.bank, 'UCO Bank');
-  assert.equal(tx.merchant, 'DMART');
+  assert.equal(tx.merchant, 'DMart');
   assert.equal(tx.category, 'groceries');
 });
 
@@ -67,7 +67,7 @@ test('detects IDFC First Bank variant and health merchant', () => {
     'IDFCFB'
   );
   assert.equal(tx.bank, 'IDFC First Bank');
-  assert.equal(tx.merchant, 'APOLLO PHARMACY');
+  assert.equal(tx.merchant, 'Apollo');
   assert.equal(tx.category, 'health');
 });
 
@@ -108,7 +108,7 @@ test('parses a refund as credit and identifies the refund merchant', () => {
   );
   assert.equal(tx.amount, 299);
   assert.equal(tx.type, 'credit');
-  assert.equal(tx.merchant, 'ZOMATO');
+  assert.equal(tx.merchant, 'Zomato');
   assert.equal(tx.category, 'food');
 });
 
@@ -117,7 +117,7 @@ test('detects grocery delivery merchants instead of treating them as food', () =
     'Rs. 640 paid to BLINKIT via UPI Ref 9988.',
     'HDFCBK'
   );
-  assert.equal(tx.merchant, 'BLINKIT');
+  assert.equal(tx.merchant, 'Blinkit');
   assert.equal(tx.category, 'groceries');
 });
 
@@ -133,7 +133,7 @@ test('detects a raw UPI ID as the merchant', () => {
   const tx = sample(
     'Rs. 450 sent to foodcorner@upi from your account.'
   );
-  assert.equal(tx.merchant, 'foodcorner@upi');
+  assert.equal(tx.merchant, 'Foodcorner');
 });
 
 test('ignores OTP messages', () => {
